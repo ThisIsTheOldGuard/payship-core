@@ -1,0 +1,2 @@
+# payship-core
+pet project

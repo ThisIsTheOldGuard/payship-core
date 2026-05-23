@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: payship-db
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: payship_core
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d payship_core"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 🔵 Сервис миграций
+  migrate:
+    image: migrate/migrate
+    container_name: payship-migrate
+    volumes:
+      - ./migrations:/migrations
+    environment:
+      DATABASE_URL: postgres://admin:secret@postgres:5432/payship_core?sslmode=disable
+    command: ["-path", "/migrations", "-database", "postgres://admin:secret@postgres:5432/payship_core?sslmode=disable", "up"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+volumes:
+  pgdata:

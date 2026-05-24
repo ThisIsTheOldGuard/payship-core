@@ -11,6 +11,7 @@ import (
 
 	"github.com/ThisIsTheOldGuard/payship-core/internal/api"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/repository"
+	"github.com/ThisIsTheOldGuard/payship-core/internal/service"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
@@ -60,7 +61,6 @@ func main() {
 	orderRepo := repository.NewOrderRepo(pool)
 
 	// Создание сервера
-
 	addr := os.Getenv("SERVER_ADDR")
 	if addr == "" {
 		addr = "0.0.0.0:8080"
@@ -68,14 +68,22 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", api.HomeHandler)
-	mux.HandleFunc("/order", api.OrderHandler(orderRepo))
+	//mux.HandleFunc("/", api.HomeHandler)
+	//mux.HandleFunc("/order", api.OrderHandler(orderRepo))
+
+	orderSvc := service.NewOrderService(orderRepo)
+
+	mux.HandleFunc("GET /", api.HomeHandler)
+	mux.HandleFunc("POST /order", api.OrderHandler(orderSvc))
+	mux.HandleFunc("GET /orders", api.ListOrdersHandler(orderSvc))
+	mux.HandleFunc("GET /order/{id}", api.GetOrderHandler(orderSvc))
 
 	srv := &http.Server{
 		Addr:    addr,
 		Handler: mux,
 	}
 
+	// Запуск сервера
 	go func() {
 		slog.Info("Starting server", "address", srv.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

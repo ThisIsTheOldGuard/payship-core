@@ -2,11 +2,13 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/ThisIsTheOldGuard/payship-core/internal/model"
-	"github.com/ThisIsTheOldGuard/payship-core/internal/repository"
+	"github.com/ThisIsTheOldGuard/payship-core/internal/service"
 )
 
 // Для валидации также можно использовать https://github.com/go-playground/validator
@@ -31,14 +33,8 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("Hello! You visited the home page."))
 }
 
-func OrderHandler(repo repository.OrderRepo) http.HandlerFunc {
+func OrderHandler(svc *service.OrderService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// POST
-		if r.Method != http.MethodPost {
-			//http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			sendJSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
-			return
-		}
 
 		// Разбор Json
 		var req struct {
@@ -46,32 +42,19 @@ func OrderHandler(repo repository.OrderRepo) http.HandlerFunc {
 			Amount       float64 `json:"amount"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			//http.Error(w, "Bad request", http.StatusBadRequest)
-			sendJSONError(w, http.StatusBadRequest, "Bad request")
+			sendJSONError(w, http.StatusBadRequest, "invalid JSON body")
 			return
 		}
 
-		// Валидация
-		if req.CustomerName == "" {
-			sendJSONError(w, http.StatusBadRequest, "customer_name is required")
-			return
-		}
-		if req.Amount <= 0 {
-			sendJSONError(w, http.StatusBadRequest, "amount must be greater than 0")
-			return
-		}
-
-		// Создание заказа
-		order := &model.Order{
-			CustomerName: req.CustomerName,
-			Amount:       req.Amount,
-			Status:       "pending",
-		}
-
-		if err := repo.Create(r.Context(), order); err != nil {
-			slog.Error("Failed to create order", "error", err)
-			//http.Error(w, "Internal error", http.StatusInternalServerError)
-			sendJSONError(w, http.StatusInternalServerError, "Internal error")
+		order, err := svc.CreateOrder(r.Context(), req.CustomerName, req.Amount)
+		if err != nil {
+			switch {
+			case errors.Is(err, service.ErrEmptyCustomer), errors.Is(err, service.ErrInvalidAmount):
+				sendJSONError(w, http.StatusBadRequest, err.Error())
+			default:
+				slog.Error("Failed to create order", "error", err)
+				sendJSONError(w, http.StatusInternalServerError, "internal error")
+			}
 			return
 		}
 
@@ -79,5 +62,75 @@ func OrderHandler(repo repository.OrderRepo) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		_ = json.NewEncoder(w).Encode(order)
+
+	}
+}
+
+func GetOrderHandler(svc *service.OrderService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idStr := r.PathValue("id")
+
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			sendJSONError(w, http.StatusBadRequest, "invalid order id")
+			return
+		}
+
+		order, err := svc.GetOrder(r.Context(), id)
+		if err != nil {
+			if errors.Is(err, service.ErrOrderNotFound) {
+				sendJSONError(w, http.StatusNotFound, err.Error())
+				return
+			}
+			slog.Error("Failed to get order", "error", err)
+			sendJSONError(w, http.StatusInternalServerError, "internal error")
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(order)
+	}
+}
+
+func ListOrdersHandler(svc *service.OrderService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		page := 1
+		limit := 20
+		if p := r.URL.Query().Get("page"); p != "" {
+			val, err := strconv.Atoi(p)
+			if err != nil {
+				sendJSONError(w, http.StatusBadRequest, "invalid page value")
+			}
+			page = val
+		}
+		if l := r.URL.Query().Get("limit"); l != "" {
+			val, err := strconv.Atoi(l)
+			if err != nil {
+				sendJSONError(w, http.StatusBadRequest, "invalid limit value")
+			}
+			limit = val
+		}
+
+		orders, total, err := svc.ListOrders(r.Context(), limit, page)
+		if err != nil {
+			switch {
+			case errors.Is(err, service.ErrOrderNotFound), errors.Is(err, service.ErrInvalidPage):
+				sendJSONError(w, http.StatusNotFound, err.Error())
+			default:
+				slog.Error("Failed to list orders", "error", err)
+				sendJSONError(w, http.StatusInternalServerError, "internal error")
+			}
+			return
+		}
+
+		response := &model.OrderListResponse{
+			Items: orders,
+			Total: total,
+			Page:  page,
+			Limit: limit,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(response)
 	}
 }

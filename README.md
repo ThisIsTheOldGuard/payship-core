@@ -2,7 +2,8 @@
 
 Микросервисная система обработки заказов маркетплейса. Pet-проект для отработки production-практик Go, работы с распределёнными системами и инфраструктурой как код.
 
-##  Стэк
+<a id="stack"></a>
+## Стэк
 - **Язык:** Go 1.24+
 - **БД:** PostgreSQL 15 (Alpine)
 - **Миграции:** `golang-migrate` (автоматизированы через Docker Compose)
@@ -10,7 +11,8 @@
 - **API:** REST (планируется gRPC)
 - **Очереди:** Apache Kafka (в планах)
 
-##  Зависимости
+<a id="dependencies"></a>
+## 📦 Зависимости
 Для локального запуска требуется:
 1. **WSL2** с дистрибутивом Ubuntu (рекомендуется)
 2. **Docker Desktop** + Docker Compose v2
@@ -18,6 +20,7 @@
 4. **Git**
 5. **Migrate** (`go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest`)
 
+<a id="deploy"></a>
 ## Развертывание
 
 ### Клонирование и зависимости
@@ -48,54 +51,33 @@ docker exec -it payship-db psql -U admin -d payship_core
 ├── internal/         # Бизнес-логика
 ├── pkg/              # Переиспользуемые утилиты
 ├── configs/          # Конфигурации
+├── docs/             # Полная API-документация
 ├── docker-compose.yml
 └── README.md
 ```
 
-## 🔌 API Контракт
+<a id="api"></a>
+##  API
+Полная спецификация с примерами запросов/ответов и описанием ошибок доступна в **[📖 docs/api.md](docs/api.md)**.
 
-### `POST /order` — Создание заказа
+| Метод  | Путь           | Описание                                      |
+|--------|----------------|-----------------------------------------------|
+| `POST` | `/order`       | [Создание заказа](docs/api.md#post-order)  |
+| `GET`  | `/order/{id}`  | [Получение по ID](docs/api.md#get-order-id)   |
+| `GET`  | `/orders`      | [Список с пагинацией](docs/api.md#get-orders) |
 
-**Запрос:**
-``` json
-{
-  "customer_name": "string (required, min 1 char)",
-  "amount": "number (required, > 0)"
-}
-```
-Успешный ответ (201 Created):
-``` json
-{
-  "id": 1,
-  "customer_name": "Матфей",
-  "amount": 1500.5,
-  "status": "pending",
-  "created_at": "2026-05-24T10:00:00Z"
-}
-```
-Ошибки (400 Bad Request):
-``` json
-{"error": "customer_name is required"}
-{"error": "amount must be greater than 0"}
-{"error": "invalid JSON body"}
-```
-
-Пример:
-``` curl
-curl -X POST http://127.0.0.1:8080/order 
--H "Content-Type: application/json" 
--d '{"customer_name":"Матфей","amount":1500.50}'
-```
-
+<a id="verification"></a>
 ## Верификация
 
 - **REST API:** http://localhost:8080 (При работе с VPN```ip addr show eth0 | grep inet```:8080)
 - **PostgreSQL** localhost:5432 (user: ```admin```, pass: ```secret```)
 - **Логи:** ```docker compose logs -f```
 
+<a id="road-map"></a>
 ## Road-Map
 Hardening (сейчас) > API & Домен > Логирование (Прометеус) > Асинхронность & Брокер (Kafka) > CI/CD & Deploy
 
+<a id="plans"></a>
 ## Будущие планы
 - Прикрутить Postman
 - [Использовать этот валидатор](https://github.com/go-playground/validator)

@@ -18,13 +18,39 @@
 4. **Git**
 5. **Migrate** (`go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest`)
 
-## 🚀 СТАРТ
+## Развертывание
 
-### 1. Клонирование и зависимости
+### Клонирование и зависимости
 ``bash
-git clone https://github.com/[YourUsername]/payship-core.git
+git clone https://github.com/ThisIsTheOldGuard/payship-core.git
 cd payship-core
 go mod download``
+
+### Запуск инфраструктуры
+``` bash
+#Запуск контейнера
+docker compose up -d
+
+# Проверка статуса контейнеров
+docker compose ps
+
+# Вход в консоль БД
+docker exec -it payship-db psql -U admin -d payship_core
+```
+
+### БД & Миграции
+- **Автоматическое применение:** через сервис migrate в docker-compose.yml
+
+### 📁 Структура
+```
+.
+├── cmd/              # Точки входа (api, worker)
+├── internal/         # Бизнес-логика
+├── pkg/              # Переиспользуемые утилиты
+├── configs/          # Конфигурации
+├── docker-compose.yml
+└── README.md
+```
 
 ## 🔌 API Контракт
 
@@ -61,39 +87,13 @@ curl -X POST http://127.0.0.1:8080/order
 -d '{"customer_name":"Матфей","amount":1500.50}'
 ```
 
-## Запуск инфраструктуры
-``` bash
-#Запуск контейнера
-docker compose up -d
-
-# Проверка статуса контейнеров
-docker compose ps
-
-# Вход в консоль БД
-docker exec -it payship-db psql -U admin -d payship_core
-```
-
-## БД & Миграции
-- **Автоматическое применение:** через сервис migrate в docker-compose.yml
-
-## 📁 Структура
-```
-.
-├── cmd/              # Точки входа (api, worker)
-├── internal/         # Бизнес-логика
-├── pkg/              # Переиспользуемые утилиты
-├── configs/          # Конфигурации
-├── docker-compose.yml
-└── README.md
-```
-
 ## Верификация
 
 - **REST API:** http://localhost:8080 (При работе с VPN```ip addr show eth0 | grep inet```:8080)
 - **PostgreSQL** localhost:5432 (user: ```admin```, pass: ```secret```)
 - **Логи:** ```docker compose logs -f```
 
-## ROAD-MAP
+## Road-Map
 Hardening (сейчас) > API & Домен > Логирование (Прометеус) > Асинхронность & Брокер (Kafka) > CI/CD & Deploy
 
 ## Будущие планы

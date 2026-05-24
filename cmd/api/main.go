@@ -5,6 +5,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/ThisIsTheOldGuard/payship-core/internal/api"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/repository"
@@ -25,11 +28,6 @@ func main() {
 	dbURL := os.Getenv("DB_URL")
 	if dbURL == "" {
 		dbURL = "postgres://admin:secret@localhost:5432/payship_core?sslmode=disable"
-	}
-
-	addr := os.Getenv("SERVER_ADDR")
-	if addr == "" {
-		addr = "0.0.0.0:8080"
 	}
 
 	// Получаем файл конфига нашей БД
@@ -58,16 +56,46 @@ func main() {
 	}
 	slog.Info("Connected to PostgreSQL", "pool_size", pool.Stat().TotalConns())
 
-	// 2. Инициализация репозитория
+	// Инициализация репозитория
 	orderRepo := repository.NewOrderRepo(pool)
 
-	// 3. Регистрация хендлеров (передаём репозиторий)
-	http.HandleFunc("/", api.HomeHandler)
-	http.HandleFunc("/order", api.OrderHandler(orderRepo))
+	// Создание сервера
 
-	slog.Info("Starting server", "address", "http://localhost:8080")
-	// 0.0.0.0 по причине работы с Ubuntu в wsl Windows
-	if err := http.ListenAndServe(addr, nil); err != nil {
-		slog.Error("Server failed", "error", err)
+	addr := os.Getenv("SERVER_ADDR")
+	if addr == "" {
+		addr = "0.0.0.0:8080"
 	}
+
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/", api.HomeHandler)
+	mux.HandleFunc("/order", api.OrderHandler(orderRepo))
+
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: mux,
+	}
+
+	go func() {
+		slog.Info("Starting server", "address", srv.Addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("Server failed", "error", err)
+		}
+	}()
+
+	// Обработка завершения / CTRL + C
+	// Возможно стоит использовать https://github.com/sollniss/graceful
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	slog.Info("Shutdown Server ...")
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		slog.Error("Server forced to shutdown", "error", err)
+	}
+
+	slog.Info("Server exited properly")
 }

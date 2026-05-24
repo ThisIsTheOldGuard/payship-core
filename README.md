@@ -26,6 +26,45 @@ git clone https://github.com/[YourUsername]/payship-core.git
 cd payship-core
 go mod download``
 
+## 🔌 API Контракт
+
+### `POST /order` — Создание заказа
+
+**Запрос:**
+``` json
+{
+  "customer_name": "string (required, min 1 char)",
+  "amount": "number (required, > 0)"
+}
+```
+Успешный ответ (201 Created):
+``` json
+{
+  "id": 1,
+  "customer_name": "МатФей",
+  "amount": 1500.5,
+  "status": "pending",
+  "created_at": "2026-05-24T10:00:00Z"
+}
+```
+Будут после написания валидации
+
+Ошибки (400 Bad Request):
+``` json
+{"error": "customer_name is required"}
+{"error": "amount must be greater than 0"}
+{"error": "invalid JSON body"}
+```
+
+Пример:
+``` json
+curl -X POST http://127.0.0.1:8080/order \
+-H "Content-Type: application/json" \
+-d '{"customer_name":"МатФей","amount":1500.50}'
+```
+
+В будущем планирую прикрутить postman
+
 ## Запуск инфраструктуры
 ``` bash
 #Запуск контейнера

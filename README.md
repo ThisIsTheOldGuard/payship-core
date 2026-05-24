@@ -96,3 +96,4 @@ docker exec -it payship-db psql -U admin -d payship_core
 - **REST API:** http://localhost:8080 (При работе с VPN```ip addr show eth0 | grep inet```:8080)
 - **PostgreSQL** localhost:5432 (user: ```admin```, pass: ```secret```)
 - **Логи:** ```docker compose logs -f```
+.

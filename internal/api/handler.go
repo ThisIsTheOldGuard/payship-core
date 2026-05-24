@@ -115,7 +115,9 @@ func ListOrdersHandler(svc *service.OrderService) http.HandlerFunc {
 		orders, total, err := svc.ListOrders(r.Context(), limit, page)
 		if err != nil {
 			switch {
-			case errors.Is(err, service.ErrOrderNotFound), errors.Is(err, service.ErrInvalidPage):
+			case errors.Is(err, service.ErrOrderNotFound),
+				errors.Is(err, service.ErrInvalidPage),
+				errors.Is(err, service.ErrInvalidLimit):
 				sendJSONError(w, http.StatusNotFound, err.Error())
 			default:
 				slog.Error("Failed to list orders", "error", err)

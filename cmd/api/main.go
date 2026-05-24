@@ -68,9 +68,6 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	//mux.HandleFunc("/", api.HomeHandler)
-	//mux.HandleFunc("/order", api.OrderHandler(orderRepo))
-
 	orderSvc := service.NewOrderService(orderRepo)
 
 	mux.HandleFunc("GET /", api.HomeHandler)

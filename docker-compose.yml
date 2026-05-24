@@ -23,9 +23,7 @@ services:
     container_name: payship-migrate
     volumes:
       - ./migrations:/migrations
-    environment:
-      DATABASE_URL: postgres://admin:secret@postgres:5432/payship_core?sslmode=disable
-    command: ["-path", "/migrations", "-database", "${DB_URL}", "up"]
+    command: ["-path", "/migrations", "-database", "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable", "up"]
     depends_on:
       postgres:
         condition: service_healthy

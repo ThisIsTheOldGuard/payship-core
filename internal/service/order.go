@@ -37,7 +37,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, customerName string, amo
 	order := &model.Order{
 		CustomerName: customerName,
 		Amount:       amount,
-		Status:       "pending",
+		Status:       model.StatusPending,
 	}
 
 	if err := s.repo.Create(ctx, order); err != nil {

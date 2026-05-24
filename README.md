@@ -41,14 +41,12 @@ go mod download``
 ``` json
 {
   "id": 1,
-  "customer_name": "МатФей",
+  "customer_name": "Матфей",
   "amount": 1500.5,
   "status": "pending",
   "created_at": "2026-05-24T10:00:00Z"
 }
 ```
-Будут после написания валидации
-
 Ошибки (400 Bad Request):
 ``` json
 {"error": "customer_name is required"}
@@ -60,10 +58,8 @@ go mod download``
 ``` curl
 curl -X POST http://127.0.0.1:8080/order 
 -H "Content-Type: application/json" 
--d '{"customer_name":"МатФей","amount":1500.50}'
+-d '{"customer_name":"Матфей","amount":1500.50}'
 ```
-
-В будущем планирую прикрутить postman
 
 ## Запуск инфраструктуры
 ``` bash
@@ -96,3 +92,10 @@ docker exec -it payship-db psql -U admin -d payship_core
 - **REST API:** http://localhost:8080 (При работе с VPN```ip addr show eth0 | grep inet```:8080)
 - **PostgreSQL** localhost:5432 (user: ```admin```, pass: ```secret```)
 - **Логи:** ```docker compose logs -f```
+
+## ROAD-MAP
+Hardening (сейчас) > API & Домен > Логирование (Прометеус) > Асинхронность & Брокер (Kafka) > CI/CD & Deploy
+
+## Будущие планы
+- Прикрутить Postman
+- [Использовать этот валидатор](https://github.com/go-playground/validator)

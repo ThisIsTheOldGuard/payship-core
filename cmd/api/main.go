@@ -9,14 +9,31 @@ import (
 	"github.com/ThisIsTheOldGuard/payship-core/internal/api"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/repository"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// env
+	err := godotenv.Load()
+	if err != nil {
+		slog.Error("Error loading .env file", "error", err)
+	}
+
+	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		dbURL = "postgres://admin:secret@localhost:5432/payship_core?sslmode=disable"
+	}
+
+	addr := os.Getenv("SERVER_ADDR")
+	if addr == "" {
+		addr = "0.0.0.0:8080"
+	}
+
 	// Получаем файл конфига нашей БД
-	poolCfg, err := pgxpool.ParseConfig("postgres://admin:secret@localhost:5432/payship_core?sslmode=disable")
+	poolCfg, err := pgxpool.ParseConfig(dbURL)
 	if err != nil {
 		slog.Error("Failed to parse db config", "error", err)
 		os.Exit(1)
@@ -50,7 +67,7 @@ func main() {
 
 	slog.Info("Starting server", "address", "http://localhost:8080")
 	// 0.0.0.0 по причине работы с Ubuntu в wsl Windows
-	if err := http.ListenAndServe("0.0.0.0:8080", nil); err != nil {
+	if err := http.ListenAndServe(addr, nil); err != nil {
 		slog.Error("Server failed", "error", err)
 	}
 }

@@ -9,6 +9,19 @@ import (
 	"github.com/ThisIsTheOldGuard/payship-core/internal/repository"
 )
 
+// Для валидации также можно использовать https://github.com/go-playground/validator
+
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+// sendJSONError — вспомогательная функция для единого формата ошибок
+func sendJSONError(w http.ResponseWriter, status int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(ErrorResponse{Error: message})
+}
+
 // HomeHandler Обрабатывает запросы на главную страницу
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Request received", "method", r.Method, "path", r.URL.Path)
@@ -20,20 +33,35 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 func OrderHandler(repo repository.OrderRepo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// POST
 		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			//http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			sendJSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
 			return
 		}
 
+		// Разбор Json
 		var req struct {
 			CustomerName string  `json:"customer_name"`
 			Amount       float64 `json:"amount"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Bad request", http.StatusBadRequest)
+			//http.Error(w, "Bad request", http.StatusBadRequest)
+			sendJSONError(w, http.StatusBadRequest, "Bad request")
 			return
 		}
 
+		// Валидация
+		if req.CustomerName == "" {
+			sendJSONError(w, http.StatusBadRequest, "customer_name is required")
+			return
+		}
+		if req.Amount <= 0 {
+			sendJSONError(w, http.StatusBadRequest, "amount must be greater than 0")
+			return
+		}
+
+		// Создание заказа
 		order := &model.Order{
 			CustomerName: req.CustomerName,
 			Amount:       req.Amount,
@@ -42,12 +70,14 @@ func OrderHandler(repo repository.OrderRepo) http.HandlerFunc {
 
 		if err := repo.Create(r.Context(), order); err != nil {
 			slog.Error("Failed to create order", "error", err)
-			http.Error(w, "Internal error", http.StatusInternalServerError)
+			//http.Error(w, "Internal error", http.StatusInternalServerError)
+			sendJSONError(w, http.StatusInternalServerError, "Internal error")
 			return
 		}
 
+		// Ответ
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(order)
+		_ = json.NewEncoder(w).Encode(order)
 	}
 }

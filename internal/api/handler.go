@@ -33,7 +33,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("Hello! You visited the home page."))
 }
 
-func OrderHandler(svc *service.OrderService) http.HandlerFunc {
+func CreateOrderHandler(svc *service.OrderService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Разбор Json
@@ -134,5 +134,46 @@ func ListOrdersHandler(svc *service.OrderService) http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(response)
+	}
+}
+
+func UpdateOrderTransitionHandler(svc *service.OrderService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		idStr := r.PathValue("id")
+
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			sendJSONError(w, http.StatusBadRequest, "invalid order id")
+			return
+		}
+
+		// заготовка на будущее, например дял создания новой таблицы status с id
+		var transition struct {
+			Name string `json:"name"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&transition); err != nil {
+			sendJSONError(w, http.StatusBadRequest, "invalid JSON body")
+			return
+		}
+
+		if err := svc.UpdateOrderTransition(r.Context(), id, transition.Name); err != nil {
+			switch {
+			case errors.Is(err, service.ErrNotValidTransition),
+				errors.Is(err, service.ErrInvalidTransition):
+				sendJSONError(w, http.StatusBadRequest, err.Error())
+			case errors.Is(err, service.ErrOrderNotFound):
+				sendJSONError(w, http.StatusNotFound, err.Error())
+			default:
+				slog.Error("Failed to update status order", "error", err)
+				sendJSONError(w, http.StatusInternalServerError, "internal error")
+			}
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNoContent)
+
 	}
 }

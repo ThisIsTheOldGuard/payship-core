@@ -60,11 +60,12 @@ docker exec -it payship-db psql -U admin -d payship_core
 ##  API
 Полная спецификация с примерами запросов/ответов и описанием ошибок доступна в **[📖 docs/api.md](docs/api.md)**.
 
-| Метод  | Путь           | Описание                                      |
-|--------|----------------|-----------------------------------------------|
-| `POST` | `/order`       | [Создание заказа](docs/api.md#post-order)  |
-| `GET`  | `/order/{id}`  | [Получение по ID](docs/api.md#get-order-id)   |
-| `GET`  | `/orders`      | [Список с пагинацией](docs/api.md#get-orders) |
+| Метод  | Путь                      | Описание                                                    |
+|--------|---------------------------|-------------------------------------------------------------|
+| `POST` | `/order`                  | [Создание заказа](docs/api.md#post-order)                   |
+| `GET`  | `/order/{id}`             | [Получение по ID](docs/api.md#get-order-id)                 |
+| `GET`  | `/orders`                 | [Список с пагинацией](docs/api.md#get-orders)               |
+| `POST` | `order/{id}/transitions`  | [Обновление статуса](docs/api.md#post-order-id-transitions) |
 
 <a id="verification"></a>
 ## Верификация

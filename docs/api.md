@@ -19,7 +19,7 @@ All error responses follow a unified JSON structure with an appropriate HTTP sta
 ## Endpoints
 
 <a id="post-order"></a>
-### `POST /order` — Создать заказ
+### `POST /order` - Создать заказ
 
 **Описание:** Создаёт новый заказ в системе. Присваивает статус `pending` и генерирует `id`.
 
@@ -34,7 +34,7 @@ All error responses follow a unified JSON structure with an appropriate HTTP sta
 ```
 
 #### 🔹 Response
-- **`201 Created`** — Заказ успешно создан
+- **`201 Created`** - Заказ успешно создан
 ```json
 {
   "id": 1,
@@ -64,7 +64,7 @@ curl -X POST http://127.0.0.1:8080/order \
 ---
 
 <a id="get-order-id"></a>
-### `GET /order/{id}` — Получить заказ по ID
+### `GET /order/{id}` - Получить заказ по ID
 
 **Описание:** Возвращает детали конкретного заказа по его уникальному идентификатору.
 
@@ -99,7 +99,7 @@ curl http://127.0.0.1:8080/order/1
 ---
 
 <a id="get-orders"></a>
-### `GET /orders` — Список заказов (Пагинация)
+### `GET /orders` - Список заказов (Пагинация)
 
 **Описание:** Возвращает список заказов с поддержкой пагинации. Сортировка: по дате создания (`created_at DESC`).
 
@@ -146,15 +146,52 @@ curl http://127.0.0.1:8080/order/1
 | `400` | `{"error": "limit must be between 1 and 100"}` | `limit < 1` или `limit > 100` |
 | `500` | `{"error": "internal error"}` | Ошибка БД |
 
-#### 🔹 Пример
+<a id="post-order-id-transitions"></a>
+### `POST /order/{id}/transitions` - Изменение статуса заказа
+
+**Описание:** Переводит заказ в новый статус с обязательной валидацией допустимых переходов.
+
+На текущий момент это:
+- Pending > Processing / Cancelled
+- Processing Completed / Cancelled
+
+- **Path Parameters:** `id` (integer, required)
+
+#### 🔹 Body
+```json
+{
+  "name": "string (pending, processing, completed, cancelled)"
+}
+```
+
+#### 🔹 Response
+- **`204 Created`** - Выполнен успешный переход статуса заказа
+
+**Ошибки:**
+
+| Status | Response | Причина                                                    |
+|--------|----------|------------------------------------------------------------|
+| `400` | `{"error": "invalid order id"}` | `id` не является целым числом иоли пуст                    |
+| `400` | `{"error": "invalid JSON body"}` | Некорректный JSON или отсутствует поле `name`              |
+| `400` | `{"error": "invalid status value"}` | Переданное значение не входит в допустимый список статусов |
+| `404` | `{"error": "order not found"}` | Заказ с таким `id` не существует                           |
+| `400` | `{"error": "invalid transition from X to Y"}` | Переход запрещён                                           |
+| `500` | `{"error": "internal error"}` | Ошибка БД                                                  |
+
+**Правила переходов:**
+
+| Текущий статус | Допустимые следующие статусы |
+|----------------|------------------------------|
+| `pending` | `processing`, `cancelled` |
+| `processing` | `completed`, `cancelled` |
+| `completed` | Переходы запрещены|
+| `cancelled` | Переходы запрещены |
+Возможно в будущем добавлю возможность возобновления закрытого или удаленного заказа, но скорее всего это будет реализовано через создание нового заказа.
+
+**Пример:**
 ```bash
-# По умолчанию
-curl "http://127.0.0.1:8080/orders"
-
-# Пагинация
-curl "http://127.0.0.1:8080/orders?page=2&limit=5"
-
-# Ошибка валидации
-curl "http://127.0.0.1:8080/orders?limit=200"
-# Ответ: {"error":"limit must be between 1 and 100"}
+curl -X POST http://127.0.0.1:8080/order/1/transitions \
+  -H "Content-Type: application/json" \
+  -d '{"name":"processing"}'
+# Ответ: {"order_id":1,"status":"processing","message":"transition successful"} (200)
 ```

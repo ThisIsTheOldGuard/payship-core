@@ -2,9 +2,11 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ThisIsTheOldGuard/payship-core/internal/model"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -12,11 +14,14 @@ type OrderRepo interface {
 	Create(ctx context.Context, order *model.Order) error
 	GetByID(ctx context.Context, id int64) (*model.Order, error)
 	ListOrders(ctx context.Context, limit, offset int) ([]*model.Order, int, error)
+	UpdateOrderTransition(ctx context.Context, id int64, status model.OrderStatus) error
 }
 
 type orderRepo struct {
 	pool *pgxpool.Pool
 }
+
+var ErrOrderNotFound = errors.New("order not found")
 
 // Возвращает адрес нашей таблицы, с которой будем работать
 func NewOrderRepo(pool *pgxpool.Pool) OrderRepo {
@@ -45,7 +50,9 @@ func (r *orderRepo) GetByID(ctx context.Context, id int64) (*model.Order, error)
 	err := r.pool.QueryRow(ctx, query, id).Scan(&order.ID, &order.CustomerName, &order.Amount, &order.Status, &order.CreatedAt)
 
 	if err != nil {
-
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrOrderNotFound
+		}
 		return nil, fmt.Errorf("orderRepo.GetByID: %w", err)
 	}
 
@@ -86,4 +93,16 @@ func (r *orderRepo) ListOrders(ctx context.Context, limit, offset int) ([]*model
 	}
 
 	return orders, total, nil
+}
+
+func (r *orderRepo) UpdateOrderTransition(ctx context.Context, id int64, status model.OrderStatus) error {
+
+	query := `UPDATE orders SET status = $1 WHERE id = $2`
+	_, err := r.pool.Exec(ctx, query, status, id)
+	if err != nil {
+		return fmt.Errorf("orderRepo.UpdateOrderTransition: %w", err)
+	}
+
+	return nil
+
 }

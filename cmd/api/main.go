@@ -71,9 +71,10 @@ func main() {
 	orderSvc := service.NewOrderService(orderRepo)
 
 	mux.HandleFunc("GET /", api.HomeHandler)
-	mux.HandleFunc("POST /order", api.OrderHandler(orderSvc))
+	mux.HandleFunc("POST /order", api.CreateOrderHandler(orderSvc))
 	mux.HandleFunc("GET /orders", api.ListOrdersHandler(orderSvc))
 	mux.HandleFunc("GET /order/{id}", api.GetOrderHandler(orderSvc))
+	mux.HandleFunc("POST /order/{id}/transitions", api.UpdateOrderTransitionHandler(orderSvc))
 
 	srv := &http.Server{
 		Addr:    addr,

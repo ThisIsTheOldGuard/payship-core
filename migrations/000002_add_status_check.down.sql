@@ -1,0 +1,1 @@
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS chk_order_status;

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -39,8 +40,21 @@ func main() {
 	}
 
 	// Ограничиваем пул для локальной разработки
-	poolCfg.MaxConns = 10
-	poolCfg.MinConns = 2
+	MaxConnsStr := os.Getenv("MaxConns")
+	MaxConnsInt, err := strconv.Atoi(MaxConnsStr)
+	if err != nil {
+		slog.Info("Ошибка при конвертации: %v. Будет использовано значение по умолчанию.\n", err)
+		MaxConnsInt = 10 // значение по умолчанию
+	}
+	poolCfg.MaxConns = int32(MaxConnsInt)
+
+	MinConnsStr := os.Getenv("MinConns")
+	MinConnsInt, err := strconv.Atoi(MinConnsStr)
+	if err != nil {
+		slog.Info("Ошибка при конвертации: %v. Будет использовано значение по умолчанию.\n", err)
+		MinConnsInt = 2 // значение по умолчанию
+	}
+	poolCfg.MinConns = int32(MinConnsInt)
 
 	// Создаем пул базы данных на основе настроек
 	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)

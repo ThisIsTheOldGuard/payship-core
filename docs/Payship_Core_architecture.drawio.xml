@@ -1,81 +1,107 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36" version="29.1.1">
+<mxfile host="drawio-plugin" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36" modified="2026-05-30T00:37:59.050Z" version="22.1.22" etag="lzTgYsiw86iCkmElw72b" type="embed">
   <diagram name="Страница-1" id="xDlYahyfxe77NF_qwXQo">
-    <mxGraphModel dx="2175" dy="0" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="4411" dy="991" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-2" parent="1" style="swimlane;html=1;startSize=30;horizontal=1;container=1;collapsible=1;childLayout=stackLayout;fontSize=14;fontStyle=1;align=center;titleBackgroundColor=#dae8fc;strokeColor=#6c8ebf;fillColor=#f5f5f5;" value="Docker Compose Environment" vertex="1">
-          <mxGeometry height="560" width="900" x="240" y="1200" as="geometry" />
+        <mxCell id="7" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="370" y="1380" width="1000" height="780" as="geometry" />
         </mxCell>
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-22" edge="1" parent="1" source="BuSYHRSPGomcCxfg7wXE-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="BuSYHRSPGomcCxfg7wXE-3">
+        <mxCell id="6" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="7">
+          <mxGeometry width="1000" height="780" as="geometry" />
+        </mxCell>
+        <mxCell id="5" value="Docker Compose Environment" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="7">
+          <mxGeometry width="1000" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="7" source="8" target="9">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-11" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" value="HTTP Client&#xa;(curl / Postman / Frontend)" vertex="1">
-          <mxGeometry height="60" width="180" x="20" y="1270" as="geometry" />
+        <mxCell id="8" value="cmd/api (config.go)&lt;br&gt;• init configs DB&lt;br&gt;•&amp;nbsp;init configs Srv" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="7">
+          <mxGeometry x="40" y="390" width="170" height="120" as="geometry" />
         </mxCell>
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-13" edge="1" parent="1" source="BuSYHRSPGomcCxfg7wXE-3" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="BuSYHRSPGomcCxfg7wXE-4">
-          <mxGeometry height="50" relative="1" width="50" as="geometry">
-            <mxPoint x="760" y="-110" as="sourcePoint" />
-            <mxPoint x="800" y="-110" as="targetPoint" />
-          </mxGeometry>
+        <mxCell id="9" value="cmd/api (app.go)&lt;br&gt;• Create Db Pool" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="7">
+          <mxGeometry x="40" y="240" width="170" height="120" as="geometry" />
         </mxCell>
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-14" edge="1" parent="1" source="BuSYHRSPGomcCxfg7wXE-4" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="BuSYHRSPGomcCxfg7wXE-5">
-          <mxGeometry height="50" relative="1" width="50" as="geometry">
-            <mxPoint x="920" y="-50" as="sourcePoint" />
-            <mxPoint x="920" y="-10" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-15" edge="1" parent="1" source="BuSYHRSPGomcCxfg7wXE-5" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="BuSYHRSPGomcCxfg7wXE-6">
-          <mxGeometry height="50" relative="1" width="50" as="geometry">
-            <mxPoint x="920" y="90" as="sourcePoint" />
-            <mxPoint x="920" y="130" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-16" edge="1" parent="1" source="BuSYHRSPGomcCxfg7wXE-6" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="BuSYHRSPGomcCxfg7wXE-8">
-          <mxGeometry height="50" relative="1" width="50" as="geometry">
-            <mxPoint x="1040" y="180" as="sourcePoint" />
-            <mxPoint x="1280" y="110" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-17" edge="1" parent="1" source="BuSYHRSPGomcCxfg7wXE-9" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;entryX=1;entryY=0.5;dashed=1;" target="BuSYHRSPGomcCxfg7wXE-8">
-          <mxGeometry height="50" relative="1" width="50" as="geometry">
-            <mxPoint x="1280" y="245" as="sourcePoint" />
-            <mxPoint x="1280" y="170" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-20" parent="1" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=10;" value="Legend:&#xa;������ Entry point&#xa;������ API handlers&#xa;������ Business logic&#xa;������ Data access&#xa;������ Models/Config" vertex="1">
-          <mxGeometry height="80" width="160" x="20" y="1680" as="geometry" />
-        </mxCell>
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" value="internal/service/order.go&#xa;• OrderService&#xa;• Business validation&#xa;• Status machine&#xa;• Domain errors" vertex="1">
-          <mxGeometry height="120" width="200" x="500" y="1420" as="geometry" />
-        </mxCell>
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" value="internal/repository/order.go&#xa;• OrderRepo interface&#xa;• pgxpool queries&#xa;• SQL mapping&#xa;• repository.ErrOrderNotFound" vertex="1">
-          <mxGeometry height="150" width="180" x="510" y="1590" as="geometry" />
-        </mxCell>
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-8" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" value="PostgreSQL 15&lt;br&gt;• Orders table&lt;br&gt;• CHECK constraint&lt;br&gt;• idx_orders_created_at&lt;br&gt;• pg_isready healthcheck" vertex="1">
-          <mxGeometry height="150" width="140" x="780" y="1590" as="geometry" />
-        </mxCell>
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-9" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;dashed=1;fontSize=10;" value="migrate/migrate&#xa;• golang-migrate&#xa;• migrations/*.sql&#xa;• schema_migrations" vertex="1">
-          <mxGeometry height="140" width="140" x="980" y="1595" as="geometry" />
-        </mxCell>
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-24" edge="1" parent="1" source="BuSYHRSPGomcCxfg7wXE-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=1;" target="BuSYHRSPGomcCxfg7wXE-3">
+        <mxCell id="BuSYHRSPGomcCxfg7wXE-22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="BuSYHRSPGomcCxfg7wXE-11" target="BuSYHRSPGomcCxfg7wXE-3" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-10" parent="1" style="note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" value=".env + configs/&#xa;• POSTGRES_USER&#xa;• POSTGRES_PASSWORD&#xa;• pool limits" vertex="1">
-          <mxGeometry height="80" width="180" x="20" y="1350" as="geometry" />
+        <mxCell id="BuSYHRSPGomcCxfg7wXE-11" value="HTTP Client&#xa;(curl / Postman / Frontend)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="170" y="1490" width="180" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-21" edge="1" parent="1" source="BuSYHRSPGomcCxfg7wXE-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="BuSYHRSPGomcCxfg7wXE-6">
+        <mxCell id="BuSYHRSPGomcCxfg7wXE-13" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="BuSYHRSPGomcCxfg7wXE-3" target="BuSYHRSPGomcCxfg7wXE-4" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="910" y="110" as="sourcePoint" />
+            <mxPoint x="950" y="110" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="BuSYHRSPGomcCxfg7wXE-14" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="BuSYHRSPGomcCxfg7wXE-4" target="BuSYHRSPGomcCxfg7wXE-5" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1070" y="170" as="sourcePoint" />
+            <mxPoint x="1070" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="BuSYHRSPGomcCxfg7wXE-15" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="BuSYHRSPGomcCxfg7wXE-5" target="BuSYHRSPGomcCxfg7wXE-6" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1070" y="470" as="sourcePoint" />
+            <mxPoint x="1070" y="510" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="BuSYHRSPGomcCxfg7wXE-16" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="BuSYHRSPGomcCxfg7wXE-6" target="BuSYHRSPGomcCxfg7wXE-8" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1190" y="560" as="sourcePoint" />
+            <mxPoint x="1430" y="490" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="BuSYHRSPGomcCxfg7wXE-17" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;entryX=1;entryY=0.5;dashed=1;" parent="1" source="BuSYHRSPGomcCxfg7wXE-9" target="BuSYHRSPGomcCxfg7wXE-8" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1430" y="625" as="sourcePoint" />
+            <mxPoint x="1430" y="550" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="BuSYHRSPGomcCxfg7wXE-20" value="Legend:&#xa;🔵 Entry point&#xa;🟢 API handlers&#xa;🔴 Business logic&#xa;🟣 Data access&#xa;🟡 Models/Config" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="180" y="2080" width="160" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="BuSYHRSPGomcCxfg7wXE-5" value="internal/service/order.go&lt;br&gt;• OrderService&lt;br&gt;•&amp;nbsp;OrderRepo interface&lt;br&gt;• Business validation&lt;br&gt;• Status machine&lt;br&gt;• Domain errors" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="650" y="1800" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="BuSYHRSPGomcCxfg7wXE-6" value="internal/repository/order.go&lt;br&gt;• pgxpool queries&lt;br&gt;• SQL mapping&lt;br&gt;• repository.ErrOrderNotFound" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="660" y="1970" width="180" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="BuSYHRSPGomcCxfg7wXE-8" value="PostgreSQL 15&lt;br&gt;• Orders table&lt;br&gt;• CHECK constraint&lt;br&gt;• idx_orders_created_at&lt;br&gt;• pg_isready healthcheck" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="930" y="1970" width="140" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="BuSYHRSPGomcCxfg7wXE-9" value="migrate/migrate&#xa;• golang-migrate&#xa;• migrations/*.sql&#xa;• schema_migrations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;dashed=1;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="1130" y="1975" width="140" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="BuSYHRSPGomcCxfg7wXE-24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=1;" parent="1" source="BuSYHRSPGomcCxfg7wXE-10" target="8" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" value="internal/model/order.go&#xa;• Order struct&#xa;• OrderStatus type&#xa;• Valid() method&#xa;• JSON tags" vertex="1">
-          <mxGeometry height="135" width="160" x="270" y="1597.5" as="geometry" />
+        <mxCell id="BuSYHRSPGomcCxfg7wXE-10" value=".env + configs/&#xa;• POSTGRES_USER&#xa;• POSTGRES_PASSWORD&#xa;• pool limits" style="note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="170" y="1570" width="180" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="internal/api/handler.go&#xa;• OrderHandler&#xa;• JSON decode/encode&#xa;• HTTP status mapping&#xa;• slog logging" vertex="1">
-          <mxGeometry height="120" width="200" x="500" y="1240" as="geometry" />
+        <mxCell id="BuSYHRSPGomcCxfg7wXE-21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="BuSYHRSPGomcCxfg7wXE-7" target="BuSYHRSPGomcCxfg7wXE-6" edge="1">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="BuSYHRSPGomcCxfg7wXE-3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" value="cmd/api (main.go)&#xa;• Server setup&#xa;• Graceful shutdown&#xa;• Dependency injection" vertex="1">
-          <mxGeometry height="120" width="170" x="260" y="1240" as="geometry" />
+        <mxCell id="BuSYHRSPGomcCxfg7wXE-7" value="internal/model/order.go&#xa;• Order struct&#xa;• OrderStatus type&#xa;• Valid() method&#xa;• JSON tags" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="420" y="1977.5" width="160" height="135" as="geometry" />
+        </mxCell>
+        <mxCell id="BuSYHRSPGomcCxfg7wXE-4" value="internal/api/handler.go&#xa;• OrderHandler&#xa;• JSON decode/encode&#xa;• HTTP status mapping&#xa;• slog logging" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="650" y="1460" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="BuSYHRSPGomcCxfg7wXE-3" value="cmd/api (main.go)&#xa;• Server setup&#xa;• Graceful shutdown&#xa;• Dependency injection" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="410" y="1460" width="170" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="9" target="BuSYHRSPGomcCxfg7wXE-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="8" target="BuSYHRSPGomcCxfg7wXE-3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="620" y="1830" />
+              <mxPoint x="620" y="1600" />
+              <mxPoint x="495" y="1600" />
+            </Array>
+          </mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>

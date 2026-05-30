@@ -6,14 +6,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/ThisIsTheOldGuard/payship-core/internal/api"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/repository"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/service"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
 
@@ -22,67 +20,28 @@ func main() {
 	defer cancel()
 
 	// env
-	err := godotenv.Load()
-	if err != nil {
-		slog.Error("Error loading .env file", "error", err)
-	}
+	_ = godotenv.Load()
 
-	dbURL := os.Getenv("DB_URL")
-	if dbURL == "" {
-		dbURL = "postgres://admin:secret@localhost:5432/payship_core?sslmode=disable"
-	}
-
-	// Получаем файл конфига нашей БД
-	poolCfg, err := pgxpool.ParseConfig(dbURL)
+	dbCfg := LoadDBConfig()
+	pool, err := NewDBPool(ctx, dbCfg)
 	if err != nil {
-		slog.Error("Failed to parse db config", "error", err)
-		os.Exit(1)
-	}
-
-	// Ограничиваем пул для локальной разработки
-	MaxConnsStr := os.Getenv("MaxConns")
-	MaxConnsInt, err := strconv.Atoi(MaxConnsStr)
-	if err != nil {
-		slog.Info("Ошибка при конвертации: %v. Будет использовано значение по умолчанию.\n", err)
-		MaxConnsInt = 10 // значение по умолчанию
-	}
-	poolCfg.MaxConns = int32(MaxConnsInt)
-
-	MinConnsStr := os.Getenv("MinConns")
-	MinConnsInt, err := strconv.Atoi(MinConnsStr)
-	if err != nil {
-		slog.Info("Ошибка при конвертации: %v. Будет использовано значение по умолчанию.\n", err)
-		MinConnsInt = 2 // значение по умолчанию
-	}
-	poolCfg.MinConns = int32(MinConnsInt)
-
-	// Создаем пул базы данных на основе настроек
-	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
-	if err != nil {
-		slog.Error("Failed to connect to db", "error", err)
+		slog.Error("Failed to init DB", "error", err)
 		os.Exit(1)
 	}
 	defer pool.Close()
 
 	// Проверка подключения
 	if err := pool.Ping(ctx); err != nil {
-		slog.Error("Database ping failed", "error", err)
+		slog.Error("DB ping failed", "error", err)
 		os.Exit(1)
 	}
 	slog.Info("Connected to PostgreSQL", "pool_size", pool.Stat().TotalConns())
 
-	// Инициализация репозитория
-	orderRepo := repository.NewOrderRepo(pool)
-
-	// Создание сервера
-	addr := os.Getenv("SERVER_ADDR")
-	if addr == "" {
-		addr = "0.0.0.0:8080"
-	}
+	repo := repository.NewOrderRepo(pool)
+	srvCfg := LoadSrvConfig()
+	orderSvc := service.NewOrderService(repo)
 
 	mux := http.NewServeMux()
-
-	orderSvc := service.NewOrderService(orderRepo)
 
 	mux.HandleFunc("GET /", api.HomeHandler)
 	mux.HandleFunc("POST /order", api.CreateOrderHandler(orderSvc))
@@ -91,7 +50,7 @@ func main() {
 	mux.HandleFunc("POST /order/{id}/transitions", api.UpdateOrderTransitionHandler(orderSvc))
 
 	srv := &http.Server{
-		Addr:    addr,
+		Addr:    srvCfg.addr,
 		Handler: mux,
 	}
 

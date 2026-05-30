@@ -6,25 +6,17 @@ import (
 	"fmt"
 
 	"github.com/ThisIsTheOldGuard/payship-core/internal/model"
+	"github.com/ThisIsTheOldGuard/payship-core/internal/service"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-type OrderRepo interface {
-	Create(ctx context.Context, order *model.Order) error
-	GetByID(ctx context.Context, id int64) (*model.Order, error)
-	ListOrders(ctx context.Context, limit, offset int) ([]*model.Order, int, error)
-	UpdateOrderTransition(ctx context.Context, id int64, status model.OrderStatus) error
-}
 
 type orderRepo struct {
 	pool *pgxpool.Pool
 }
 
-var ErrOrderNotFound = errors.New("order not found")
-
 // Возвращает адрес нашей таблицы, с которой будем работать
-func NewOrderRepo(pool *pgxpool.Pool) OrderRepo {
+func NewOrderRepo(pool *pgxpool.Pool) service.OrderRepo {
 	return &orderRepo{pool: pool}
 }
 
@@ -51,7 +43,7 @@ func (r *orderRepo) GetByID(ctx context.Context, id int64) (*model.Order, error)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrOrderNotFound
+			return nil, errors.New("orderRepo.GetByID: order not found")
 		}
 		return nil, fmt.Errorf("orderRepo.GetByID: %w", err)
 	}

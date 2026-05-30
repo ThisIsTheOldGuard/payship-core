@@ -7,7 +7,6 @@ import (
 	"slices"
 
 	"github.com/ThisIsTheOldGuard/payship-core/internal/model"
-	"github.com/ThisIsTheOldGuard/payship-core/internal/repository"
 )
 
 var (
@@ -20,8 +19,15 @@ var (
 	ErrInvalidTransition  = errors.New("invalid transition")
 )
 
+type OrderRepo interface {
+	Create(ctx context.Context, order *model.Order) error
+	GetByID(ctx context.Context, id int64) (*model.Order, error)
+	ListOrders(ctx context.Context, limit, offset int) ([]*model.Order, int, error)
+	UpdateOrderTransition(ctx context.Context, id int64, status model.OrderStatus) error
+}
+
 type OrderService struct {
-	repo repository.OrderRepo
+	repo OrderRepo
 }
 
 var allowedTransitions = map[model.OrderStatus][]model.OrderStatus{
@@ -37,7 +43,7 @@ func validateTransition(from, to model.OrderStatus) bool {
 	return slices.Contains(allowed, to)
 }
 
-func NewOrderService(repo repository.OrderRepo) *OrderService {
+func NewOrderService(repo OrderRepo) *OrderService {
 	return &OrderService{repo: repo}
 }
 
@@ -66,9 +72,6 @@ func (s *OrderService) CreateOrder(ctx context.Context, customerName string, amo
 func (s *OrderService) GetOrder(ctx context.Context, id int64) (*model.Order, error) {
 	order, err := s.repo.GetByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, repository.ErrOrderNotFound) {
-			return nil, ErrOrderNotFound
-		}
 		return nil, fmt.Errorf("service.GetOrder: %w", err)
 	}
 	if order == nil {
@@ -103,9 +106,6 @@ func (s *OrderService) UpdateOrderTransition(ctx context.Context, id int64, stat
 
 	order, err := s.repo.GetByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, repository.ErrOrderNotFound) {
-			return ErrOrderNotFound
-		}
 		return fmt.Errorf("service.UpdateOrderTransition: %w", err)
 	}
 	if order == nil {

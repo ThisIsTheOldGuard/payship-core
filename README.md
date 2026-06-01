@@ -50,6 +50,7 @@ docker exec -it payship-db psql -U admin -d payship_core
 ├── cmd/              # Точки входа (api)
 ├── internal/         # Бизнес-логика
 ├── docs/             # Полная API-документация
+├── migrations/       # Миграции psql
 ├── docker-compose.yml
 └── README.md
 ```

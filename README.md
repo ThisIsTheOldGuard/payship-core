@@ -47,9 +47,9 @@ docker exec -it payship-db psql -U admin -d payship_core
 ### 📁 Структура
 ```
 .
-├── cmd/              # Точки входа (api)
-├── internal/         # Бизнес-логика
-├── docs/             # Полная API-документация
+├── cmd/                            # Точки входа (api)
+├── internal/                       # Бизнес-логика
+├── docs/                           # Полная API-документация
 ├── migrations/       # Миграции psql
 ├── docker-compose.yml
 └── README.md
@@ -65,6 +65,20 @@ docker exec -it payship-db psql -U admin -d payship_core
 | `GET`  | `/order/{id}`             | [Получение по ID](docs/api.md#get-order-id)                 |
 | `GET`  | `/orders`                 | [Список с пагинацией](docs/api.md#get-orders)               |
 | `POST` | `order/{id}/transitions`  | [Обновление статуса](docs/api.md#post-order-id-transitions) |
+
+<a id="api"></a>
+##  Тесты
+Временно тесты реализованы только для ./internal/service
+```
+# Запустить тесты пакета service с флагом покрытия
+go test ./internal/service -cover
+
+# HTML-отчёт
+go test ./internal/service -coverprofile=coverage.out
+go tool cover -html=coverage.out
+xdg-open coverage.html
+# Открываем результат html с возможностью просмотра покрытия кода
+```
 
 <a id="verification"></a>
 ## Верификация

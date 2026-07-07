@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/ThisIsTheOldGuard/payship-core/internal/domain"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/model"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/service"
 )
@@ -89,7 +90,7 @@ func CreateOrderHandler(svc *service.OrderService) http.HandlerFunc {
 		order, err := svc.CreateOrder(r.Context(), req.CustomerName, req.Amount)
 		if err != nil {
 			switch {
-			case errors.Is(err, service.ErrEmptyCustomer), errors.Is(err, service.ErrInvalidAmount):
+			case errors.Is(err, domain.ErrEmptyCustomer), errors.Is(err, domain.ErrInvalidAmount):
 				sendJSONError(w, http.StatusBadRequest, err.Error())
 			default:
 				slog.Error("Failed to create order", "error", err)
@@ -137,7 +138,7 @@ func GetOrderHandler(svc *service.OrderService) http.HandlerFunc {
 
 		order, err := svc.GetOrder(r.Context(), id)
 		if err != nil {
-			if errors.Is(err, service.ErrOrderNotFound) {
+			if errors.Is(err, domain.ErrOrderNotFound) {
 				sendJSONError(w, http.StatusNotFound, err.Error())
 				return
 			}
@@ -193,9 +194,9 @@ func ListOrdersHandler(svc *service.OrderService) http.HandlerFunc {
 		orders, total, err := svc.ListOrders(r.Context(), limit, page)
 		if err != nil {
 			switch {
-			case errors.Is(err, service.ErrOrderNotFound),
-				errors.Is(err, service.ErrInvalidPage),
-				errors.Is(err, service.ErrInvalidLimit):
+			case errors.Is(err, domain.ErrOrderNotFound),
+				errors.Is(err, domain.ErrInvalidPage),
+				errors.Is(err, domain.ErrInvalidLimit):
 				sendJSONError(w, http.StatusNotFound, err.Error())
 			default:
 				slog.Error("Failed to list orders", "error", err)
@@ -261,10 +262,10 @@ func UpdateOrderTransitionHandler(svc *service.OrderService) http.HandlerFunc {
 
 		if err := svc.UpdateOrderTransition(r.Context(), id, transition.Name); err != nil {
 			switch {
-			case errors.Is(err, service.ErrNotValidTransition),
-				errors.Is(err, service.ErrInvalidTransition):
+			case errors.Is(err, domain.ErrNotValidTransition),
+				errors.Is(err, domain.ErrInvalidTransition):
 				sendJSONError(w, http.StatusBadRequest, err.Error())
-			case errors.Is(err, service.ErrOrderNotFound):
+			case errors.Is(err, domain.ErrOrderNotFound):
 				sendJSONError(w, http.StatusNotFound, err.Error())
 			default:
 				slog.Error("Failed to update status order", "error", err)

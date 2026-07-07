@@ -16,24 +16,8 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/ThisIsTheOldGuard/payship-core/internal/domain"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/model"
-)
-
-var (
-	// ErrEmptyCustomer возвращается если имя заказчика пустое.
-	ErrEmptyCustomer = errors.New("customer_name is required")
-	// ErrInvalidAmount возвращается при попытке создать заказ с невалидной суммой.
-	ErrInvalidAmount = errors.New("amount must be greater than 0")
-	// ErrOrderNotFound возвращается, когда запрошенный заказ не существует.
-	ErrOrderNotFound = errors.New("order not found")
-	// ErrInvalidPage возвращается при попытке запроса несуществующей страницы.
-	ErrInvalidPage = errors.New("page must be >= 1")
-	// ErrInvalidLimit возвращается при превышении лимита запрашиваемых страниц.
-	ErrInvalidLimit = errors.New("limit must be between 1 and 100")
-	// ErrNotValidTransition возвращается при передаче неизвестного значения статуса.
-	ErrNotValidTransition = errors.New("not valid transition")
-	// ErrInvalidTransition возвращается при попытке недопустимого перехода статуса.
-	ErrInvalidTransition = errors.New("invalid transition")
 )
 
 // OrderRepo определяет контракт для операций с заказами в хранилище.
@@ -189,10 +173,10 @@ func NewOrderService(repo OrderRepo) *OrderService {
 func (s *OrderService) CreateOrder(ctx context.Context, customerName string, amount float64) (*model.Order, error) {
 
 	if customerName == "" {
-		return nil, ErrEmptyCustomer
+		return nil, domain.ErrEmptyCustomer
 	}
 	if amount <= 0 {
-		return nil, ErrInvalidAmount
+		return nil, domain.ErrInvalidAmount
 	}
 
 	order := &model.Order{
@@ -226,11 +210,11 @@ func (s *OrderService) CreateOrder(ctx context.Context, customerName string, amo
 //	}
 func (s *OrderService) GetOrder(ctx context.Context, id int64) (*model.Order, error) {
 	order, err := s.repo.GetByID(ctx, id)
+	if errors.Is(err, domain.ErrOrderNotFound) {
+		return nil, domain.ErrOrderNotFound
+	}
 	if err != nil {
 		return nil, fmt.Errorf("service.GetOrder: %w", err)
-	}
-	if order == nil {
-		return nil, ErrOrderNotFound
 	}
 	return order, nil
 }
@@ -252,10 +236,10 @@ func (s *OrderService) GetOrder(ctx context.Context, id int64) (*model.Order, er
 //	resp, err := svc.ListOrders(ctx, 2, 20)
 func (s *OrderService) ListOrders(ctx context.Context, limit, page int) ([]*model.Order, int, error) {
 	if page < 1 {
-		return nil, 0, ErrInvalidPage
+		return nil, 0, domain.ErrInvalidPage
 	}
 	if limit < 1 || limit > 100 {
-		return nil, 0, ErrInvalidLimit
+		return nil, 0, domain.ErrInvalidLimit
 	}
 
 	offset := (page - 1) * limit
@@ -287,19 +271,19 @@ func (s *OrderService) UpdateOrderTransition(ctx context.Context, id int64, stat
 
 	transition := model.OrderStatus(status)
 	if !transition.Valid() {
-		return ErrNotValidTransition
+		return domain.ErrNotValidTransition
 	}
 
 	order, err := s.repo.GetByID(ctx, id)
+	if errors.Is(err, domain.ErrOrderNotFound) {
+		return domain.ErrOrderNotFound
+	}
 	if err != nil {
 		return fmt.Errorf("service.UpdateOrderTransition: %w", err)
 	}
-	if order == nil {
-		return ErrOrderNotFound
-	}
 
 	if !validateTransition(order.Status, transition) {
-		return ErrInvalidTransition
+		return domain.ErrInvalidTransition
 	}
 
 	return s.repo.UpdateOrderTransition(ctx, id, transition)

@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ThisIsTheOldGuard/payship-core/internal/domain"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/model"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/service"
 	"github.com/jackc/pgx/v5"
@@ -104,7 +105,7 @@ func (r *orderRepo) GetByID(ctx context.Context, id int64) (*model.Order, error)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, errors.New("orderRepo.GetByID: order not found")
+			return nil, domain.ErrOrderNotFound
 		}
 		return nil, fmt.Errorf("orderRepo.GetByID: %w", err)
 	}

@@ -39,7 +39,11 @@ docker compose ps
 
 # Вход в консоль БД
 docker exec -it payship-db psql -U admin -d payship_core
+
+# Проверить доступ к серверу приложения prometheus
+exec -it prometheus wget -qO- http://host.docker.internal:8080/metrics | head
 ```
+После разворачивания, авторизоваться в grafana, настроить подключение к promtheus (http://prometheus:9090), загрузить дашборды из ./grafana/dashboards/
 
 ### БД & Миграции
 - **Автоматическое применение:** через сервис migrate в docker-compose.yml
@@ -104,9 +108,11 @@ xdg-open coverage.html
 
 <a id="verification"></a>
 ## Верификация
-
-- **REST API:** http://localhost:8080 (При работе с VPN```ip addr show eth0 | grep inet```:8080)
+Получить локалхост при работе с wsl или VPN - localhost = ```hostname -I | awk '{print $1}'```:8080
+- **REST API:** http://localhost:8080
 - **PostgreSQL** localhost:5432 (user: ```admin```, pass: ```secret```)
+- **Prometheus** localhost:9090/targets
+- **Grafana** localhost:3000/dashboards (user: ```admin```, pass: ```admin```, после регистрации поменять пароль в .env)
 - **Логи:** ```docker compose logs -f```
 
 <a id="road-map"></a>

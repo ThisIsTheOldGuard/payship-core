@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ThisIsTheOldGuard/payship-core/internal/domain"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/model"
@@ -24,7 +25,8 @@ import (
 
 // orderRepo - структура для описания методов получателя
 type orderRepo struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	metrics DBMetrics
 }
 
 // NewOrderRepo создаёт новую реализацию репозитория заказов.
@@ -43,8 +45,8 @@ type orderRepo struct {
 //
 //	pool, _ := pgxpool.New(ctx, dsn)
 //	repo := NewOrderRepo(pool)
-func NewOrderRepo(pool *pgxpool.Pool) service.OrderRepo {
-	return &orderRepo{pool: pool}
+func NewOrderRepo(pool *pgxpool.Pool, metrics DBMetrics) service.OrderRepo {
+	return &orderRepo{pool: pool, metrics: metrics}
 }
 
 // Create сохраняет новый заказ в базе данных.
@@ -67,6 +69,11 @@ func NewOrderRepo(pool *pgxpool.Pool) service.OrderRepo {
 //	}
 //	fmt.Println("Created order ID:", order.ID)
 func (r *orderRepo) Create(ctx context.Context, order *model.Order) error {
+
+	start := time.Now()
+	defer func() {
+		r.metrics.ObserveQueryDuration("create_order", time.Since(start))
+	}()
 
 	query := `INSERT INTO orders (customer_name, amount, status) VALUES ($1, $2, $3) RETURNING id, created_at`
 	err := r.pool.QueryRow(ctx, query, order.CustomerName, order.Amount, order.Status).Scan(&order.ID, &order.CreatedAt)
@@ -98,6 +105,11 @@ func (r *orderRepo) Create(ctx context.Context, order *model.Order) error {
 //	    // обработать 404
 //	}
 func (r *orderRepo) GetByID(ctx context.Context, id int64) (*model.Order, error) {
+
+	start := time.Now()
+	defer func() {
+		r.metrics.ObserveQueryDuration("get_order", time.Since(start))
+	}()
 
 	query := `SELECT id, customer_name, amount, status, created_at FROM orders WHERE id = $1`
 	var order model.Order
@@ -135,12 +147,12 @@ func (r *orderRepo) GetByID(ctx context.Context, id int64) (*model.Order, error)
 //	pages := (total + 19) / 20 // округление вверх
 func (r *orderRepo) ListOrders(ctx context.Context, limit, offset int) ([]*model.Order, int, error) {
 
-	var total int
+	start := time.Now()
+	defer func() {
+		r.metrics.ObserveQueryDuration("select_orders", time.Since(start))
+	}()
 
-	//conn, _ := r.pool.Acquire(ctx)
-	//defer conn.Release()
-	//time.Sleep(20 * time.Second)
-	//err := conn.QueryRow(ctx, `SELECT COUNT(*) FROM orders`).Scan(&total)
+	var total int
 
 	err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM orders`).Scan(&total)
 
@@ -196,6 +208,11 @@ func (r *orderRepo) ListOrders(ctx context.Context, limit, offset int) ([]*model
 //	    // обработать ошибку БД
 //	}
 func (r *orderRepo) UpdateOrderTransition(ctx context.Context, id int64, status model.OrderStatus) error {
+
+	start := time.Now()
+	defer func() {
+		r.metrics.ObserveQueryDuration("update_order", time.Since(start))
+	}()
 
 	query := `UPDATE orders SET status = $1 WHERE id = $2`
 	_, err := r.pool.Exec(ctx, query, status, id)

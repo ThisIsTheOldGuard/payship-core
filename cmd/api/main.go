@@ -65,13 +65,15 @@ func main() {
 	}
 	slog.Info("Connected to PostgreSQL", "pool_size", pool.Stat().TotalConns())
 
-	repo := repository.NewOrderRepo(pool)
+	repo := repository.NewOrderRepo(pool, PrometheusDBMetric{})
 	srvCfg := LoadSrvConfig()
 	orderSvc := service.NewOrderService(repo)
 
 	mux := http.NewServeMux()
 
 	RegisterMetrics()
+	RegisterDBMetrics()
+
 	mux.HandleFunc("GET /metrics", promhttp.Handler().ServeHTTP)
 	mux.HandleFunc("GET /", api.NotFoundHandler)
 	mux.HandleFunc("GET /{$}", api.HomeHandler)

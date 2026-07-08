@@ -46,7 +46,6 @@ type ErrorResponse struct {
 //	$ curl http://localhost:8080/
 //	PayShip API is running
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	slog.Info("Request received", "method", r.Method, "path", r.URL.Path)
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
@@ -128,6 +127,7 @@ func CreateOrderHandler(svc *service.OrderService) http.HandlerFunc {
 //	{"id":42,"customer_name":"Bob","amount":50.0,...}
 func GetOrderHandler(svc *service.OrderService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		idStr := r.PathValue("id")
 
 		id, err := strconv.ParseInt(idStr, 10, 64)
@@ -174,6 +174,7 @@ func GetOrderHandler(svc *service.OrderService) http.HandlerFunc {
 //	{"items":[...],"total":150,"page":1,"limit":10}
 func ListOrdersHandler(svc *service.OrderService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		page := 1
 		limit := 20
 		if p := r.URL.Query().Get("page"); p != "" {

@@ -26,6 +26,7 @@ import (
 	"github.com/ThisIsTheOldGuard/payship-core/internal/repository"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/service"
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // main инициализирует и запускает HTTP-сервер обработки заказов.
@@ -66,6 +67,9 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	RegisterMetrics()
+	mux.HandleFunc("GET /metrics", promhttp.Handler().ServeHTTP)
+
 	mux.HandleFunc("GET /", api.HomeHandler)
 	mux.HandleFunc("POST /order", api.CreateOrderHandler(orderSvc))
 	mux.HandleFunc("GET /orders", api.ListOrdersHandler(orderSvc))
@@ -74,7 +78,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:    srvCfg.addr,
-		Handler: mux,
+		Handler: MetricsMiddleware(mux),
 	}
 
 	// Запуск сервера

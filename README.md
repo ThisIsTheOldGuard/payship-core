@@ -54,8 +54,10 @@ exec -it prometheus wget -qO- http://host.docker.internal:8080/metrics | head
 ├── cmd/                            # Точки входа (api)
 ├── internal/                       # Бизнес-логика
 ├── docs/                           # Полная API-документация
-├── migrations/       # Миграции psql
+├── migrations/                     # Миграции psql
+├── grafana/                        # Сопутствующие файлы grafana
 ├── docker-compose.yml
+├── prometheus.yml
 └── README.md
 ```
 

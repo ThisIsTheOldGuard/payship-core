@@ -41,7 +41,7 @@ docker compose ps
 docker exec -it payship-db psql -U admin -d payship_core
 
 # Проверить доступ к серверу приложения prometheus
-exec -it prometheus wget -qO- http://host.docker.internal:8080/metrics | head
+docker exec -it prometheus wget -qO- http://host.docker.internal:8080/metrics | head
 ```
 После разворачивания, авторизоваться в grafana, настроить подключение к promtheus (http://prometheus:9090), загрузить дашборды из ./grafana/dashboards/
 

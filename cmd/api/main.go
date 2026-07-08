@@ -73,12 +73,13 @@ func main() {
 
 	RegisterMetrics()
 	mux.HandleFunc("GET /metrics", promhttp.Handler().ServeHTTP)
-
-	mux.HandleFunc("GET /", api.HomeHandler)
+	mux.HandleFunc("GET /", api.NotFoundHandler)
+	mux.HandleFunc("GET /{$}", api.HomeHandler)
 	mux.HandleFunc("POST /order", api.CreateOrderHandler(orderSvc))
 	mux.HandleFunc("GET /orders", api.ListOrdersHandler(orderSvc))
 	mux.HandleFunc("GET /order/{id}", api.GetOrderHandler(orderSvc))
 	mux.HandleFunc("POST /order/{id}/transitions", api.UpdateOrderTransitionHandler(orderSvc))
+	InitTestHandlers(mux, pool)
 
 	srv := &http.Server{
 		Addr:    srvCfg.addr,

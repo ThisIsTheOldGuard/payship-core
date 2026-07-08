@@ -2,8 +2,12 @@ package main
 
 import (
 	"log/slog"
+	"net/http"
 	"os"
 	"strconv"
+
+	"github.com/ThisIsTheOldGuard/payship-core/internal/api"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // DBConfig содержит параметры подключения к базе данных.
@@ -26,6 +30,14 @@ type DBConfig struct {
 //   - addr: адрес и порт для прослушивания (например, "0.0.0.0:8080").
 type SrvConfig struct {
 	addr string
+}
+
+// TestConfig содержит параметры запуска HTTP-сервера.
+//
+// Поля:
+//   - IsTest: определяет вариант работы приложения (например, "true").
+type TestConfig struct {
+	IsTest bool
 }
 
 // LoadDBConfig загружает конфигурацию БД из переменных окружения.
@@ -55,6 +67,20 @@ func LoadSrvConfig() *SrvConfig {
 	return &SrvConfig{addr: getStrEnv("SERVER_ADDR", "0.0.0.0:8080")}
 }
 
+// LoadTestConfig загружает настройки для определения формата работы приложения
+//
+// Возвращает *TestConfig с параметрами тестовых данных
+func LoadTestConfig() *TestConfig {
+	return &TestConfig{parseBoolEnv("IsTest", true)}
+}
+
+func InitTestHandlers(mux *http.ServeMux, repo *pgxpool.Pool) {
+	TestCfg := LoadTestConfig()
+	if TestCfg.IsTest {
+		mux.HandleFunc("GET /debug/db/slow", api.Debug_DB_Slow(repo))
+	}
+}
+
 func parseIntEnv(key string, defaultVal int) int32 {
 	v := os.Getenv(key)
 	if v == "" {
@@ -66,6 +92,21 @@ func parseIntEnv(key string, defaultVal int) int32 {
 		return int32(defaultVal)
 	}
 	return int32(i)
+}
+
+func parseBoolEnv(key string, defaultVal bool) bool {
+	v := os.Getenv(key)
+	if v == "" {
+		return defaultVal
+	}
+
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		slog.Warn("Invalid env var", "key", key, "error", err)
+		return defaultVal
+	}
+
+	return b
 }
 
 func getStrEnv(key string, defaultVal string) string {

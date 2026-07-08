@@ -51,6 +51,13 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("PayShip API is running"))
 }
 
+// HomeHandler обрабатывает все неподходящие запросы.
+//
+// Метод возвращает ошибку 404 в представлении ErrorResponse.
+func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
+	sendJSONError(w, http.StatusNotFound, "Page not found")
+}
+
 // CreateOrderHandler создаёт хендлер для эндпоинта POST /order.
 //
 // Функция-фабрика принимает *service.OrderService через замыкание

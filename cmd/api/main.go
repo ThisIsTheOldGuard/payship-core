@@ -26,6 +26,7 @@ import (
 	"github.com/ThisIsTheOldGuard/payship-core/internal/repository"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/service"
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -52,6 +53,9 @@ func main() {
 		slog.Error("Failed to init DB", "error", err)
 		os.Exit(1)
 	}
+
+	prometheus.MustRegister(newDBPoolCollector(pool))
+
 	defer pool.Close()
 
 	// Проверка подключения

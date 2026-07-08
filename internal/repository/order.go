@@ -136,7 +136,14 @@ func (r *orderRepo) GetByID(ctx context.Context, id int64) (*model.Order, error)
 func (r *orderRepo) ListOrders(ctx context.Context, limit, offset int) ([]*model.Order, int, error) {
 
 	var total int
+
+	//conn, _ := r.pool.Acquire(ctx)
+	//defer conn.Release()
+	//time.Sleep(20 * time.Second)
+	//err := conn.QueryRow(ctx, `SELECT COUNT(*) FROM orders`).Scan(&total)
+
 	err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM orders`).Scan(&total)
+
 	if err != nil {
 		return nil, 0, fmt.Errorf("orderRepo.ListOrders.count: %w", err)
 	}

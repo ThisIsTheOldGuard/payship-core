@@ -76,6 +76,8 @@ docker exec -it payship-db psql -U admin -d payship_core
 |---------|------------------------------------------------------|
 |http_requests_total| Общее количество запросов к API                      |
 |http_request_duration_seconds| Время выполнения запросов к API в формате интервалов |
+|db_pool_active_conns| Текущее количество активных соединений в pgxpool        |
+
 <a id="tests"></a>
 ##  Тесты
 Временно тесты реализованы только для ./internal/service

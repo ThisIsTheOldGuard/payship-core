@@ -55,7 +55,7 @@ docker exec -it prometheus wget -qO- http://host.docker.internal:8080/metrics | 
 ├── internal/                       # Бизнес-логика
 ├── docs/                           # Полная API-документация
 ├── migrations/                     # Миграции psql
-├── grafana/                        # Сопутствующие файлы grafana
+├── grafana/                        # Конфигурация grafana
 ├── docker-compose.yml
 ├── prometheus.yml
 └── README.md
@@ -75,8 +75,7 @@ docker exec -it prometheus wget -qO- http://host.docker.internal:8080/metrics | 
 
 <a id="metrics"></a>
 ##  Метрики
-На текущий момент реализованы метрики посредством prometheus
-В будуем планируется дополнительно прикрутить Grafana, а также реализацию нагрузочного тестирования
+Автоматическое развертывание prometheus и grafana, с настройкой интеграции и дашбордов.
 
 | Имя_метрики                   | Краткое описание                                     |
 |-------------------------------|------------------------------------------------------|
@@ -114,12 +113,12 @@ xdg-open coverage.html
 - **REST API:** http://localhost:8080
 - **PostgreSQL** localhost:5432 (user: ```admin```, pass: ```secret```)
 - **Prometheus** localhost:9090/targets
-- **Grafana** localhost:3000/dashboards (user: ```admin```, pass: ```admin```, после регистрации поменять пароль в .env)
+- **Grafana** localhost:3000/dashboards (user: ```admin```, pass: ```admin```)
 - **Логи:** ```docker compose logs -f```
 
 <a id="road-map"></a>
 ## Road-Map
-Hardening (сейчас) > API & Домен > Логирование (Прометеус) > Асинхронность & Брокер (Kafka) > CI/CD & Deploy
+Стресс тестирование > Асинхронность & Брокер (Kafka) > CI/CD & Deploy
 
 <a id="plans"></a>
 ## Будущие планы

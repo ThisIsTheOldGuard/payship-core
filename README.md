@@ -65,13 +65,24 @@ docker exec -it prometheus wget -qO- http://host.docker.internal:8080/metrics | 
 ##  API
 Полная спецификация с примерами запросов/ответов и описанием ошибок доступна в **[📖 docs/api.md](docs/api.md)**.
 
+###  Endpoints
+
 | Метод  | Путь                     | Описание                                                    |
 |--------|--------------------------|-------------------------------------------------------------|
 | `POST` | `/order`                 | [Создание заказа](docs/api.md#post-order)                   |
 | `GET`  | `/order/{id}`            | [Получение по ID](docs/api.md#get-order-id)                 |
 | `GET`  | `/orders`                | [Список с пагинацией](docs/api.md#get-orders)               |
 | `POST` | `order/{id}/transitions` | [Обновление статуса](docs/api.md#post-order-id-transitions) |
-| `GET`  | `/metrics`               | end point prometheus                                        |
+
+###  Healthpoints
+
+| Метод | Путь                | Описание                                          |
+|-------|---------------------|---------------------------------------------------|
+| `GET` | `/`                 | [Главная страница](docs/api.md#get-root)          |
+| `GET` | `/{not-found-page}` | [Неизвестная страница](docs/api.md#get-not-found) |
+| `GET` | `/health`           | [Доступ к API](docs/api.md#get-health)            |
+| `GET` | `/ready`            | [Доступ к БД](docs/api.md#get-ready)              |
+| `GET` | `/metrics`            | [Метрики](docs/api.md#get-metrics)                  |
 
 <a id="metrics"></a>
 ##  Метрики

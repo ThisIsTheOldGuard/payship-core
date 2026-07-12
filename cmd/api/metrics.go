@@ -72,6 +72,10 @@ func MetricsMiddleware(next http.Handler) http.Handler {
 				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			}
 
+			if rec.statusCode == http.StatusNotFound {
+				path = "not_found"
+			}
+
 			duration := time.Since(start).Seconds()
 
 			statusStr := strconv.Itoa(rec.statusCode)

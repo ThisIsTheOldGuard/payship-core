@@ -74,13 +74,17 @@ func main() {
 	RegisterMetrics()
 	RegisterDBMetrics()
 
+	mux.HandleFunc("GET /{$}", api.RootHandler())
+	mux.HandleFunc("GET /", api.NotFoundHandler())
+	mux.HandleFunc("GET /health", api.HealthHandler())
+	mux.HandleFunc("GET /ready", api.ReadyHandler(pool))
+
 	mux.HandleFunc("GET /metrics", promhttp.Handler().ServeHTTP)
-	mux.HandleFunc("GET /", api.NotFoundHandler)
-	mux.HandleFunc("GET /{$}", api.HomeHandler)
 	mux.HandleFunc("POST /order", api.CreateOrderHandler(orderSvc))
 	mux.HandleFunc("GET /orders", api.ListOrdersHandler(orderSvc))
 	mux.HandleFunc("GET /order/{id}", api.GetOrderHandler(orderSvc))
 	mux.HandleFunc("POST /order/{id}/transitions", api.UpdateOrderTransitionHandler(orderSvc))
+
 	InitTestHandlers(mux, pool)
 
 	srv := &http.Server{

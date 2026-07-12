@@ -32,30 +32,26 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
-// HomeHandler обрабатывает запросы на корневой путь "/".
+// sendJSONError отправляет стандартизированный JSON-ответ об ошибке.
 //
-// Метод возвращает простой текстовый ответ для проверки
-// работоспособности сервера (health check).
+// Вспомогательная функция устанавливает:
+//   - Content-Type: application/json
+//   - Указанный HTTP-статус код
+//   - Тело {"error": "<сообщение>"}
 //
 // Параметры:
 //   - w: http.ResponseWriter для отправки ответа.
-//   - r: *http.Request с данными запроса.
+//   - status: HTTP-статус код (например, 400, 404, 500).
+//   - message: человекочитаемое сообщение об ошибке.
 //
 // Пример:
 //
-//	$ curl http://localhost:8080/
-//	PayShip API is running
-func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("PayShip API is running"))
-}
-
-// HomeHandler обрабатывает все неподходящие запросы.
-//
-// Метод возвращает ошибку 404 в представлении ErrorResponse.
-func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
-	sendJSONError(w, http.StatusNotFound, "Page not found")
+//	sendJSONError(w, http.StatusBadRequest, "invalid amount")
+//	// Ответ: 400 {"error":"invalid amount"}
+func sendJSONError(w http.ResponseWriter, status int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(ErrorResponse{Error: message})
 }
 
 // CreateOrderHandler создаёт хендлер для эндпоинта POST /order.
@@ -78,7 +74,7 @@ func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 //	$ curl -X POST http://localhost:8080/order \
 //	  -H "Content-Type: application/json" \
 //	  -d '{"customer_name":"Alice","amount":100}'
-//	{"id":1,"customer_name":"Alice","amount":100,"status":"pending",...}
+//	//Ответ: {"id":1,"customer_name":"Alice","amount":100,"status":"pending",...}
 func CreateOrderHandler(svc *service.OrderService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -130,7 +126,7 @@ func CreateOrderHandler(svc *service.OrderService) http.HandlerFunc {
 // Пример:
 //
 //	$ curl http://localhost:8080/order/42
-//	{"id":42,"customer_name":"Bob","amount":50.0,...}
+//	//Ответ: {"id":42,"customer_name":"Bob","amount":50.0,...}
 func GetOrderHandler(svc *service.OrderService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -177,7 +173,7 @@ func GetOrderHandler(svc *service.OrderService) http.HandlerFunc {
 // Пример:
 //
 //	$ curl "http://localhost:8080/orders?page=1&limit=10"
-//	{"items":[...],"total":150,"page":1,"limit":10}
+//	//Ответ: {"items":[...],"total":150,"page":1,"limit":10}
 func ListOrdersHandler(svc *service.OrderService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -219,6 +215,7 @@ func ListOrdersHandler(svc *service.OrderService) http.HandlerFunc {
 			Limit: limit,
 		}
 		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(response)
 	}
 }
@@ -245,7 +242,7 @@ func ListOrdersHandler(svc *service.OrderService) http.HandlerFunc {
 //	$ curl -X POST http://localhost:8080/order/1/transitions \
 //	  -H "Content-Type: application/json" \
 //	  -d '{"name":"processing"}'
-//	{"order_id":1,"status":"processing","message":"transition successful"}
+//	//Ответ: {"order_id":1,"status":"processing","message":"transition successful"}
 func UpdateOrderTransitionHandler(svc *service.OrderService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -285,26 +282,4 @@ func UpdateOrderTransitionHandler(svc *service.OrderService) http.HandlerFunc {
 		w.WriteHeader(http.StatusNoContent)
 
 	}
-}
-
-// sendJSONError отправляет стандартизированный JSON-ответ об ошибке.
-//
-// Вспомогательная функция устанавливает:
-//   - Content-Type: application/json
-//   - Указанный HTTP-статус код
-//   - Тело {"error": "<сообщение>"}
-//
-// Параметры:
-//   - w: http.ResponseWriter для отправки ответа.
-//   - status: HTTP-статус код (например, 400, 404, 500).
-//   - message: человекочитаемое сообщение об ошибке.
-//
-// Пример:
-//
-//	sendJSONError(w, http.StatusBadRequest, "invalid amount")
-//	// Ответ: 400 {"error":"invalid amount"}
-func sendJSONError(w http.ResponseWriter, status int, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(ErrorResponse{Error: message})
 }

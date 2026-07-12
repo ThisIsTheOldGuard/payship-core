@@ -33,6 +33,7 @@ import (
 //	type orderRepo struct { pool *pgxpool.Pool }
 //	func (r *orderRepo) GetByID(ctx context.Context, id int64) (*model.Order, error) { ... }
 type OrderRepo interface {
+
 	// Create сохраняет новый заказ в базе данных.
 	//
 	// Метод выполняет INSERT с RETURNING id для заполнения поля ID
@@ -53,6 +54,7 @@ type OrderRepo interface {
 	//	}
 	//	fmt.Println("Created order ID:", order.ID)
 	Create(ctx context.Context, order *model.Order) error
+
 	// GetByID возвращает заказ по его уникальному идентификатору.
 	//
 	// Метод выполняет SELECT по первичному ключу.
@@ -290,11 +292,30 @@ func (s *OrderService) UpdateOrderTransition(ctx context.Context, id int64, stat
 
 }
 
+// allowedTransitions - карта допустимых переходов между статусами заказа.
+//
+// Определяет строгую бизнес-логику жизненного цикла заказа. Ключом карты является текущий статус заказа,
+// а значением - срез статусов, в которые разрешен переход из данного состояния.
+// Попытка перевести заказ в статус, отсутствующий в этом списке, будет считаться невалидной.
+//
+// Текущие правила:
+//   - StatusPending (Ожидает):     можно перевести в StatusProcessing (В работе) или StatusCancelled (Отменен).
+//   - StatusProcessing (В работе): можно перевести в StatusCompleted (Завершен) или StatusCancelled (Отменен).
 var allowedTransitions = map[model.OrderStatus][]model.OrderStatus{
 	model.StatusPending:    {model.StatusProcessing, model.StatusCancelled},
 	model.StatusProcessing: {model.StatusCompleted, model.StatusCancelled},
 }
 
+// validateTransition проверяет, разрешен ли переход заказа из одного статуса в другой.
+//
+// Сверяет запрашиваемый переход с бизнес-правилами, описанными в карте allowedTransitions.
+//
+// Параметры:
+//   - from: текущий статус заказа, из которого осуществляется переход.
+//   - to:   целевой статус, в который планируется перевести заказ.
+//
+// Возвращает:
+//   - bool: true, если переход легитимен и разрешен бизнес-логикой; false, если переход запрещен.
 func validateTransition(from, to model.OrderStatus) bool {
 	allowed, ok := allowedTransitions[from]
 	if !ok {

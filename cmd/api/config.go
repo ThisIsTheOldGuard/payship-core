@@ -81,6 +81,14 @@ func InitTestHandlers(mux *http.ServeMux, repo *pgxpool.Pool) {
 	}
 }
 
+// parseIntEnv возвращает параметр в числовом представлении.
+//
+// Функция парсит текстовое значение из env файла и возвращает int значение,
+// если значение не заполнено возвращает стандартное значение.
+//
+// Параметры:
+// - key: ключ параметра.
+// - defaultVal: стандартное значение, которое возвращается, если параметр не задан.
 func parseIntEnv(key string, defaultVal int) int32 {
 	v := os.Getenv(key)
 	if v == "" {
@@ -94,6 +102,14 @@ func parseIntEnv(key string, defaultVal int) int32 {
 	return int32(i)
 }
 
+// parseBoolEnv возвращает параметр в булевом представлении.
+//
+// Функция парсит текстовое значение из env файла и возвращает булево значение,
+// если значение не заполнено возвращает стандартное значение.
+//
+// Параметры:
+// - key: ключ параметра.
+// - defaultVal: стандартное значение, которое возвращается, если параметр не задан.
 func parseBoolEnv(key string, defaultVal bool) bool {
 	v := os.Getenv(key)
 	if v == "" {
@@ -109,6 +125,14 @@ func parseBoolEnv(key string, defaultVal bool) bool {
 	return b
 }
 
+// parseBoolEnv получает параметр в текстовом представлении.
+//
+// Функция парсит текстовое значение из env файла и возвращает значение,
+// если значение не заполнено возвращает стандартное значение.
+//
+// Параметры:
+// - key: ключ параметра.
+// - defaultVal: стандартное значение, которое возвращается, если параметр не задан.
 func getStrEnv(key string, defaultVal string) string {
 	v := os.Getenv(key)
 	if v == "" {

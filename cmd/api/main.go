@@ -54,8 +54,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	prometheus.MustRegister(newDBPoolCollector(pool))
-
 	defer pool.Close()
 
 	// Проверка подключения
@@ -73,6 +71,7 @@ func main() {
 
 	RegisterMetrics()
 	RegisterDBMetrics()
+	prometheus.MustRegister(newDBPoolCollector(pool))
 
 	mux.HandleFunc("GET /{$}", api.RootHandler())
 	mux.HandleFunc("GET /", api.NotFoundHandler())

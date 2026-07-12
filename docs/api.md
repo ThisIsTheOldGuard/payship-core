@@ -13,6 +13,14 @@ All error responses follow a unified JSON structure with an appropriate HTTP sta
   "error": "Human-readable error description"
 }
 ```
+## Common Health Format
+All status responses have a single JSON structure with a corresponding HTTP status code:
+```json
+{
+  "status": "Human-readable status description"
+}
+```
+
 
 ---
 
@@ -191,4 +199,73 @@ curl -X POST http://127.0.0.1:8080/order/1/transitions \
   -H "Content-Type: application/json" \
   -d '{"name":"processing"}'
 # Ответ: {"order_id":1,"status":"processing","message":"transition successful"} (200)
+```
+
+## Healthpoints
+
+<a id="get-root"></a>
+### `GET /` - Главная страница
+
+**Описание:** Возвращает главную страницу API
+
+#### 🔹 Response
+- **`200 OK`**
+```json
+{
+  "status" : "API is running"
+}
+```
+
+<a id="get-not-found"></a>
+### `GET /not-found-page` - Неизвестная страница
+
+**Описание:** Возвращает ошибку ненайденной страницы
+
+#### 🔹 Response
+- **`404 OK`**
+```json
+{
+  "error" : "page not found"
+}
+```
+<a id="get-health"></a>
+### `GET /health` - Доступ к API
+
+**Описание:** Возвращает доступность сервиса
+
+#### 🔹 Response
+- **`200 OK`**
+```json
+{
+  "status" : "OK"
+}
+```
+<a id="get-ready"></a>
+### `GET /ready` - Доступ к БД.
+
+**Описание:** Возвращает доступность БД.
+
+#### 🔹 Response
+- **`200 OK`**
+```json
+{
+  "status" : "Ready"
+}
+```
+#### 🔹 Errors
+| Status | Response | Причина                 |
+|--------|----------|-------------------------|
+| `503`  | `{"error": "Database is unavailable"}` | База данных не доступна |
+
+<a id="get-metrics"></a>
+### `GET /metrics` - Метрики.
+
+**Описание:** Возвращает метрики prometheus.
+
+#### 🔹 Response
+- **`200 OK`**
+```json
+{
+  {...} // Метрики
+}
 ```

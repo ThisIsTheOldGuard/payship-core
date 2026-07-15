@@ -58,6 +58,7 @@ docker exec -it prometheus wget -qO- http://host.docker.internal:8080/metrics | 
 ├── grafana/                        # Конфигурация grafana
 ├── docker-compose.yml
 ├── prometheus.yml
+├── loadtest.js                     # K6 дымовое нагрузочное тестирование
 └── README.md
 ```
 

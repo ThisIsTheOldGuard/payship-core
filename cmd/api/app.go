@@ -39,6 +39,9 @@ func NewDBPool(ctx context.Context, cfg *DBConfig) (*pgxpool.Pool, error) {
 	poolCfg.MaxConns = cfg.MaxConns
 	poolCfg.MinConns = cfg.MinConns
 
+	poolCfg.MaxConnIdleTime = cfg.MaxConnIdleTime
+	poolCfg.MaxConnLifetime = cfg.MaxConnLifetime
+
 	// Создание пула
 	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
 	if err != nil {

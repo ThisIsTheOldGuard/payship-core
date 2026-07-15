@@ -164,7 +164,7 @@ curl http://127.0.0.1:8080/order/1
 #### 🔹 Body
 ```json
 {
-  "name": "string (pending, processing, completed, cancelled)"
+  "status": "string (pending, processing, completed, cancelled)"
 }
 ```
 
@@ -176,7 +176,7 @@ curl http://127.0.0.1:8080/order/1
 | Status | Response | Причина                                                    |
 |--------|----------|------------------------------------------------------------|
 | `400` | `{"error": "invalid order id"}` | `id` не является целым числом иоли пуст                    |
-| `400` | `{"error": "invalid JSON body"}` | Некорректный JSON или отсутствует поле `name`              |
+| `400` | `{"error": "invalid JSON body or unknown fields"}` | Некорректный JSON или отсутствует поле `status`            |
 | `400` | `{"error": "invalid status value"}` | Переданное значение не входит в допустимый список статусов |
 | `404` | `{"error": "order not found"}` | Заказ с таким `id` не существует                           |
 | `400` | `{"error": "invalid transition from X to Y"}` | Переход запрещён                                           |
@@ -197,7 +197,7 @@ curl http://127.0.0.1:8080/order/1
 ```bash
 curl -X POST http://127.0.0.1:8080/order/1/transitions \
   -H "Content-Type: application/json" \
-  -d '{"name":"processing"}'
+  -d '{"status":"processing"}'
 # Ответ: {"order_id":1,"status":"processing","message":"transition successful"} (200)
 ```
 

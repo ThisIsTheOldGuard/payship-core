@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/ThisIsTheOldGuard/payship-core/internal/api"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,9 +20,11 @@ import (
 //
 // Значения по умолчанию задаются через os.Getenv с фоллбэком.
 type DBConfig struct {
-	URL      string
-	MaxConns int32
-	MinConns int32
+	URL             string
+	MaxConns        int32
+	MinConns        int32
+	MaxConnIdleTime time.Duration
+	MaxConnLifetime time.Duration
 }
 
 // SrvConfig содержит параметры запуска HTTP-сервера.
@@ -52,9 +55,12 @@ type TestConfig struct {
 func LoadDBConfig() *DBConfig {
 
 	return &DBConfig{
-		URL:      getStrEnv("DB_URL", "postgres://admin:secret@localhost:5432/payship_core?sslmode=disable"),
-		MaxConns: parseIntEnv("MAX_CONNS", 10),
-		MinConns: parseIntEnv("MIN_CONNS", 2)}
+		URL:             getStrEnv("DB_URL", "postgres://admin:secret@localhost:5432/payship_core?sslmode=disable"),
+		MaxConns:        parseIntEnv("MAX_CONNS", 20),
+		MinConns:        parseIntEnv("MIN_CONNS", 5),
+		MaxConnIdleTime: parseTimeEnv("DB_MAX_CONN_IDLE_MINUTES", 5*time.Minute),
+		MaxConnLifetime: parseTimeEnv("DB_MAX_CONN_LIFE_HOURS", 1*time.Hour),
+	}
 }
 
 // LoadSrvConfig загружает конфигурацию HTTP-сервера из переменных окружения.
@@ -139,4 +145,25 @@ func getStrEnv(key string, defaultVal string) string {
 		return defaultVal
 	}
 	return v
+}
+
+// parseTimeEnv возвращает параметр в временном представлении.
+//
+// Функция парсит текстовое значение из env файла и возвращает *time.Duration значение,
+// если значение не заполнено возвращает стандартное значение.
+//
+// Параметры:
+// - key: ключ параметра.
+// - defaultVal: стандартное значение, которое возвращается, если параметр не задан.
+func parseTimeEnv(key string, defaultVal time.Duration) time.Duration {
+	v := os.Getenv(key)
+	if v == "" {
+		return defaultVal
+	}
+	i, err := time.ParseDuration(v)
+	if err != nil {
+		slog.Warn("Invalid env var", "key", key, "error", err)
+		return defaultVal
+	}
+	return i
 }

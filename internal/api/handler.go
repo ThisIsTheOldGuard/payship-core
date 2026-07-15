@@ -241,8 +241,8 @@ func ListOrdersHandler(svc *service.OrderService) http.HandlerFunc {
 //
 //	$ curl -X POST http://localhost:8080/order/1/transitions \
 //	  -H "Content-Type: application/json" \
-//	  -d '{"name":"processing"}'
-//	//Ответ: {"order_id":1,"status":"processing","message":"transition successful"}
+//	  -d '{"status":"processing"}'
+//	//Ответ: 201
 func UpdateOrderTransitionHandler(svc *service.OrderService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -256,15 +256,18 @@ func UpdateOrderTransitionHandler(svc *service.OrderService) http.HandlerFunc {
 
 		// заготовка на будущее, например дял создания новой таблицы status с id
 		var transition struct {
-			Name string `json:"name"`
+			Status string `json:"status"`
 		}
 
-		if err := json.NewDecoder(r.Body).Decode(&transition); err != nil {
-			sendJSONError(w, http.StatusBadRequest, "invalid JSON body")
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+
+		if err := decoder.Decode(&transition); err != nil {
+			sendJSONError(w, http.StatusBadRequest, "invalid JSON body or unknown fields")
 			return
 		}
 
-		if err := svc.UpdateOrderTransition(r.Context(), id, transition.Name); err != nil {
+		if err := svc.UpdateOrderTransition(r.Context(), id, transition.Status); err != nil {
 			switch {
 			case errors.Is(err, domain.ErrNotValidTransition),
 				errors.Is(err, domain.ErrInvalidTransition):

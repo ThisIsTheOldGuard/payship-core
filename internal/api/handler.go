@@ -83,8 +83,12 @@ func CreateOrderHandler(svc *service.OrderService) http.HandlerFunc {
 			CustomerName string  `json:"customer_name"`
 			Amount       float64 `json:"amount"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			sendJSONError(w, http.StatusBadRequest, "invalid JSON body")
+
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+
+		if err := decoder.Decode(&req); err != nil {
+			sendJSONError(w, http.StatusBadRequest, "invalid JSON body or unknown fields")
 			return
 		}
 

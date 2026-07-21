@@ -39,13 +39,13 @@ type orderRepo struct {
 //   - pool: пул соединений с PostgreSQL.
 //
 // Возвращает:
-//   - service.OrderRepo: реализация репозитория.
+//   - service.OrderRepository: реализация репозитория.
 //
 // Пример:
 //
 //	pool, _ := pgxpool.New(ctx, dsn)
 //	repo := NewOrderRepo(pool)
-func NewOrderRepo(pool *pgxpool.Pool, metrics DBMetrics) service.OrderRepo {
+func NewOrderRepo(pool *pgxpool.Pool, metrics DBMetrics) service.OrderRepository {
 	return &orderRepo{pool: pool, metrics: metrics}
 }
 

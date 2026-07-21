@@ -20,7 +20,7 @@ import (
 	"github.com/ThisIsTheOldGuard/payship-core/internal/model"
 )
 
-// OrderRepo определяет контракт для операций с заказами в хранилище.
+// OrderRepository определяет контракт для операций с заказами в хранилище.
 //
 // Методы:
 //   - Create: создаёт новый заказ, заполняя автоинкрементный ID.
@@ -32,7 +32,7 @@ import (
 //
 //	type orderRepo struct { pool *pgxpool.Pool }
 //	func (r *orderRepo) GetByID(ctx context.Context, id int64) (*model.Order, error) { ... }
-type OrderRepo interface {
+type OrderRepository interface {
 
 	// Create сохраняет новый заказ в базе данных.
 	//
@@ -117,7 +117,7 @@ type OrderRepo interface {
 	UpdateOrderTransition(ctx context.Context, id int64, status model.OrderStatus) error
 }
 
-// OrderService предоставляет методы для управления заказами.
+// orderService предоставляет методы для управления заказами.
 //
 // Сервис инкапсулирует бизнес-правила:
 //   - Валидация входных данных (amount > 0, непустое имя).
@@ -131,8 +131,55 @@ type OrderRepo interface {
 //
 //	svc := NewOrderService(repo)
 //	order, err := svc.GetOrder(ctx, 123)
-type OrderService struct {
-	repo OrderRepo
+type orderService struct {
+	repo OrderRepository
+}
+
+type OrderService interface {
+	// CreateOrder создаёт новый заказ.
+	//
+	// Параметры:
+	//   - ctx: контекст для отмены/таймаута операции.
+	//   - customerName: имя клиента (не пустая строка).
+	//   - amount: сумма заказа (положительное число).
+	//
+	// Возвращает:
+	//   - *model.Order: созданный заказ с заполненным ID.
+	//   - error: ErrInvalidAmount при невалидных входных данных,
+	//     или ошибка репозитория.
+	CreateOrder(ctx context.Context, customerName string, amount float64) (*model.Order, error)
+	// GetOrder возвращает заказ по его уникальному идентификатору.
+	//
+	// Параметры:
+	//   - ctx: контекст для отмены/таймаута операции.
+	//   - id: уникальный идентификатор заказа.
+	//
+	// Возвращает:
+	//   - *model.Order: найденный заказ.
+	//   - error: ошибку если заказ не найден или если что-то пошло не так.
+	GetOrder(ctx context.Context, id int64) (*model.Order, error)
+	// ListOrders возвращает страницу заказов с пагинацией.
+	//
+	// Параметры:
+	//   - ctx: контекст для отмены/таймаута операции.
+	//   - page: номер страницы (1-based).
+	//   - limit: количество элементов на странице (макс. 100).
+	//
+	// Возвращает:
+	//   - *model.OrderListResponse: ответ с заказами и метаданными пагинации.
+	//   - error: ErrInvalidPage/ErrInvalidLimit при невалидных параметрах.
+	ListOrders(ctx context.Context, page, limit int) ([]*model.Order, int, error)
+	// UpdateOrderTransition изменяет статус заказа с проверкой правил перехода.
+	//
+	// Параметры:
+	//   - ctx: контекст для отмены/таймаута операции.
+	//   - id: уникальный идентификатор заказа.
+	//   - status: новый статус в строковом формате.
+	//
+	// Возвращает:
+	//   - error: ErrNotValidTransition, ErrOrderNotFound, ErrInvalidTransition
+	//     или ошибка репозитория.
+	UpdateOrderTransition(ctx context.Context, id int64, status string) error
 }
 
 // NewOrderService создаёт новый экземпляр сервиса заказов.
@@ -145,13 +192,13 @@ type OrderService struct {
 //   - repo: реализация контракта доступа к заказам.
 //
 // Возвращает:
-//   - *OrderService: готовый к использованию сервис.
+//   - *orderService: готовый к использованию сервис.
 //
 // Пример:
 //
 //	svc := service.NewOrderService(repo)
-func NewOrderService(repo OrderRepo) *OrderService {
-	return &OrderService{repo: repo}
+func NewOrderService(repo OrderRepository) OrderService {
+	return &orderService{repo: repo}
 }
 
 // CreateOrder создаёт новый заказ.
@@ -172,7 +219,7 @@ func NewOrderService(repo OrderRepo) *OrderService {
 //	if err != nil {
 //	    // обработать ошибку
 //	}
-func (s *OrderService) CreateOrder(ctx context.Context, customerName string, amount float64) (*model.Order, error) {
+func (s *orderService) CreateOrder(ctx context.Context, customerName string, amount float64) (*model.Order, error) {
 
 	if customerName == "" {
 		return nil, domain.ErrEmptyCustomer
@@ -210,7 +257,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, customerName string, amo
 //	if errors.Is(err, service.ErrOrderNotFound) {
 //	    // вернуть 404 клиенту
 //	}
-func (s *OrderService) GetOrder(ctx context.Context, id int64) (*model.Order, error) {
+func (s *orderService) GetOrder(ctx context.Context, id int64) (*model.Order, error) {
 	order, err := s.repo.GetByID(ctx, id)
 	if errors.Is(err, domain.ErrOrderNotFound) {
 		return nil, domain.ErrOrderNotFound
@@ -236,7 +283,7 @@ func (s *OrderService) GetOrder(ctx context.Context, id int64) (*model.Order, er
 //
 //	// Запрос: /orders?page=2&limit=20
 //	resp, err := svc.ListOrders(ctx, 2, 20)
-func (s *OrderService) ListOrders(ctx context.Context, limit, page int) ([]*model.Order, int, error) {
+func (s *orderService) ListOrders(ctx context.Context, limit, page int) ([]*model.Order, int, error) {
 	if page < 1 {
 		return nil, 0, domain.ErrInvalidPage
 	}
@@ -269,7 +316,7 @@ func (s *OrderService) ListOrders(ctx context.Context, limit, page int) ([]*mode
 //	// Разрешено: pending → processing
 //	err := svc.UpdateOrderTransition(ctx, 123, "processing")
 //	// Запрещено: pending → completed (вернёт ErrInvalidTransition)
-func (s *OrderService) UpdateOrderTransition(ctx context.Context, id int64, status string) error {
+func (s *orderService) UpdateOrderTransition(ctx context.Context, id int64, status string) error {
 
 	transition := model.OrderStatus(status)
 	if !transition.Valid() {

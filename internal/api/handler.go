@@ -56,7 +56,7 @@ func sendJSONError(w http.ResponseWriter, status int, message string) {
 
 // CreateOrderHandler создаёт хендлер для эндпоинта POST /order.
 //
-// Функция-фабрика принимает *service.OrderService через замыкание
+// Функция-фабрика принимает service.OrderService через замыкание
 // для инъекции зависимости. Возвращённый хендлер:
 //   - Декодирует JSON-тело в структуру заказа.
 //   - Валидирует обязательные поля (customer_name, amount).
@@ -75,7 +75,7 @@ func sendJSONError(w http.ResponseWriter, status int, message string) {
 //	  -H "Content-Type: application/json" \
 //	  -d '{"customer_name":"Alice","amount":100}'
 //	//Ответ: {"id":1,"customer_name":"Alice","amount":100,"status":"pending",...}
-func CreateOrderHandler(svc *service.OrderService) http.HandlerFunc {
+func CreateOrderHandler(svc service.OrderService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Разбор Json
@@ -114,7 +114,7 @@ func CreateOrderHandler(svc *service.OrderService) http.HandlerFunc {
 
 // GetOrderHandler создаёт хендлер для эндпоинта GET /order/{id}.
 //
-// Функция-фабрика принимает *service.OrderService через замыкание.
+// Функция-фабрика принимает service.OrderService через замыкание.
 // Возвращённый хендлер:
 //   - Извлекает id из path-параметра через r.PathValue("id").
 //   - Парсит id в int64, возвращает 400 при ошибке.
@@ -131,7 +131,7 @@ func CreateOrderHandler(svc *service.OrderService) http.HandlerFunc {
 //
 //	$ curl http://localhost:8080/order/42
 //	//Ответ: {"id":42,"customer_name":"Bob","amount":50.0,...}
-func GetOrderHandler(svc *service.OrderService) http.HandlerFunc {
+func GetOrderHandler(svc service.OrderService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		idStr := r.PathValue("id")
@@ -161,7 +161,7 @@ func GetOrderHandler(svc *service.OrderService) http.HandlerFunc {
 
 // ListOrdersHandler создаёт хендлер для эндпоинта GET /orders.
 //
-// Функция-фабрика принимает *service.OrderService через замыкание.
+// Функция-фабрика принимает service.OrderService через замыкание.
 // Возвращённый хендлер:
 //   - Парсит query-параметры page и limit.
 //   - Валидирует диапазон значений (page>=1, 1<=limit<=100).
@@ -178,7 +178,7 @@ func GetOrderHandler(svc *service.OrderService) http.HandlerFunc {
 //
 //	$ curl "http://localhost:8080/orders?page=1&limit=10"
 //	//Ответ: {"items":[...],"total":150,"page":1,"limit":10}
-func ListOrdersHandler(svc *service.OrderService) http.HandlerFunc {
+func ListOrdersHandler(svc service.OrderService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		page := 1
@@ -227,7 +227,7 @@ func ListOrdersHandler(svc *service.OrderService) http.HandlerFunc {
 // UpdateOrderTransitionHandler создаёт хендлер для эндпоинта
 // POST /order/{id}/transitions.
 //
-// Функция-фабрика принимает *service.OrderService через замыкание.
+// Функция-фабрика принимает service.OrderService через замыкание.
 // Возвращённый хендлер:
 //   - Извлекает id из path-параметра и парсит в int64.
 //   - Декодирует JSON-тело {"name": "new_status"}.
@@ -247,7 +247,7 @@ func ListOrdersHandler(svc *service.OrderService) http.HandlerFunc {
 //	  -H "Content-Type: application/json" \
 //	  -d '{"status":"processing"}'
 //	//Ответ: 201
-func UpdateOrderTransitionHandler(svc *service.OrderService) http.HandlerFunc {
+func UpdateOrderTransitionHandler(svc service.OrderService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		idStr := r.PathValue("id")

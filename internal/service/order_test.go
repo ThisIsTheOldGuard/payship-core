@@ -10,7 +10,7 @@ import (
 )
 
 // mockOrderRepo имитирует service.OrderRepo для модульного тестирования.
-type mockOrderRepo struct {
+type mockOrderRepository struct {
 	createCalled           bool
 	getByIDCalled          bool
 	listOrdersCalled       bool
@@ -27,28 +27,28 @@ type mockOrderRepo struct {
 
 // Метод Create имитирует метод Create репозитория.
 // Устанавливает флаг createCalled в значение true и возвращает предварительно настроенные значения.
-func (m *mockOrderRepo) Create(ctx context.Context, order *model.Order) error {
+func (m *mockOrderRepository) Create(ctx context.Context, order *model.Order) error {
 	m.createCalled = true
 	return m.createRes
 }
 
 // Метод GetByID имитирует метод Create репозитория.
 // Устанавливает флаг createCalled в значение true и возвращает предварительно настроенные значения.
-func (m *mockOrderRepo) GetByID(ctx context.Context, id int64) (*model.Order, error) {
+func (m *mockOrderRepository) GetByID(ctx context.Context, id int64) (*model.Order, error) {
 	m.getByIDCalled = true
 	return m.getByIDRes, m.getByIDErr
 }
 
 // Метод ListOrders имитирует метод Create репозитория.
 // Устанавливает флаг createCalled в значение true и возвращает предварительно настроенные значения.
-func (m *mockOrderRepo) ListOrders(ctx context.Context, limit, offset int) ([]*model.Order, int, error) {
+func (m *mockOrderRepository) ListOrders(ctx context.Context, limit, offset int) ([]*model.Order, int, error) {
 	m.listOrdersCalled = true
 	return m.listOrdersRes, m.listOrdersTotal, m.listOrdersErr
 }
 
 // Метод UpdateOrderTransition имитирует метод Create репозитория.
 // Устанавливает флаг createCalled в значение true и возвращает предварительно настроенные значения.
-func (m *mockOrderRepo) UpdateOrderTransition(ctx context.Context, id int64, status model.OrderStatus) error {
+func (m *mockOrderRepository) UpdateOrderTransition(ctx context.Context, id int64, status model.OrderStatus) error {
 	m.updateTransitionCalled = true
 	return m.updateTransitionRes
 }
@@ -58,7 +58,7 @@ func TestGetOrder(t *testing.T) {
 	tests := []struct {
 		name         string
 		id           int64
-		mockRepo     mockOrderRepo
+		mockRepo     mockOrderRepository
 		wantErr      error
 		wantAnyError bool
 		checkData    func(t *testing.T, order *model.Order)
@@ -66,7 +66,7 @@ func TestGetOrder(t *testing.T) {
 		{
 			name: "success",
 			id:   123,
-			mockRepo: mockOrderRepo{
+			mockRepo: mockOrderRepository{
 				getByIDRes: &model.Order{ID: 123, CustomerName: "Anya", Amount: 150.0, Status: model.StatusPending},
 				getByIDErr: nil,
 			},
@@ -86,7 +86,7 @@ func TestGetOrder(t *testing.T) {
 		{
 			name: "order not found",
 			id:   999,
-			mockRepo: mockOrderRepo{
+			mockRepo: mockOrderRepository{
 				getByIDRes: nil,
 				getByIDErr: domain.ErrOrderNotFound,
 			},
@@ -100,7 +100,7 @@ func TestGetOrder(t *testing.T) {
 		{
 			name: "database error (any)",
 			id:   1,
-			mockRepo: mockOrderRepo{
+			mockRepo: mockOrderRepository{
 				getByIDRes: nil,
 				getByIDErr: errors.New("database timeout"),
 			},
@@ -148,18 +148,18 @@ func TestCreateOrder(t *testing.T) {
 		name       string
 		customer   string
 		amount     float64
-		mockRepo   mockOrderRepo
+		mockRepo   mockOrderRepository
 		wantErr    error
 		wantAnyErr bool
-		checkMock  func(t *testing.T, m *mockOrderRepo)
+		checkMock  func(t *testing.T, m *mockOrderRepository)
 	}{
 		{
 			name:     "success",
 			customer: "Anya",
 			amount:   150.0,
-			mockRepo: mockOrderRepo{createRes: nil},
+			mockRepo: mockOrderRepository{createRes: nil},
 			wantErr:  nil,
-			checkMock: func(t *testing.T, m *mockOrderRepo) {
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
 				if !m.createCalled {
 					t.Errorf("expected Create to be called")
 				}
@@ -169,9 +169,9 @@ func TestCreateOrder(t *testing.T) {
 			name:     "invalid amount (negative)",
 			customer: "Alexander",
 			amount:   -10.0,
-			mockRepo: mockOrderRepo{},
+			mockRepo: mockOrderRepository{},
 			wantErr:  domain.ErrInvalidAmount,
-			checkMock: func(t *testing.T, m *mockOrderRepo) {
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
 				if m.createCalled {
 					t.Errorf("expected Create NOT to be called on invalid amount")
 				}
@@ -181,9 +181,9 @@ func TestCreateOrder(t *testing.T) {
 			name:     "invalid amount (zero)",
 			customer: "Matthew",
 			amount:   0.0,
-			mockRepo: mockOrderRepo{},
+			mockRepo: mockOrderRepository{},
 			wantErr:  domain.ErrInvalidAmount,
-			checkMock: func(t *testing.T, m *mockOrderRepo) {
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
 				if m.createCalled {
 					t.Errorf("expected Create NOT to be called on zero amount")
 				}
@@ -193,9 +193,9 @@ func TestCreateOrder(t *testing.T) {
 			name:     "empty value customer",
 			customer: "",
 			amount:   0.0,
-			mockRepo: mockOrderRepo{},
+			mockRepo: mockOrderRepository{},
 			wantErr:  domain.ErrEmptyCustomer,
-			checkMock: func(t *testing.T, m *mockOrderRepo) {
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
 				if m.createCalled {
 					t.Errorf("expected Create NOT to be called on zero amount")
 				}
@@ -205,10 +205,10 @@ func TestCreateOrder(t *testing.T) {
 			name:     "unsuccess (any)",
 			customer: "Vanya",
 			amount:   150.0,
-			mockRepo: mockOrderRepo{
+			mockRepo: mockOrderRepository{
 				createRes: errors.New("out of memory")},
 			wantAnyErr: true,
-			checkMock: func(t *testing.T, m *mockOrderRepo) {
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
 				if !m.createCalled {
 					t.Errorf("It is expected that the method was called, but it threw an error")
 				}
@@ -236,20 +236,20 @@ func TestUpdateOrderTransition(t *testing.T) {
 	tests := []struct {
 		name         string
 		targetStatus string
-		mockRepo     mockOrderRepo
+		mockRepo     mockOrderRepository
 		wantErr      error
 		wantAnyError bool
-		checkMock    func(t *testing.T, m *mockOrderRepo)
+		checkMock    func(t *testing.T, m *mockOrderRepository)
 	}{
 		{
 			name:         "valid transition: pending -> processing",
 			targetStatus: "processing",
-			mockRepo: mockOrderRepo{
+			mockRepo: mockOrderRepository{
 				getByIDRes:          &model.Order{ID: 1, Status: model.StatusPending},
 				updateTransitionRes: nil,
 			},
 			wantErr: nil,
-			checkMock: func(t *testing.T, m *mockOrderRepo) {
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
 				if !m.updateTransitionCalled {
 					t.Error("expected UpdateStatus to be called")
 				}
@@ -258,11 +258,11 @@ func TestUpdateOrderTransition(t *testing.T) {
 		{
 			name:         "invalid transition: pending -> completed",
 			targetStatus: "completed",
-			mockRepo: mockOrderRepo{
+			mockRepo: mockOrderRepository{
 				getByIDRes: &model.Order{ID: 1, Status: model.StatusPending},
 			},
 			wantErr: domain.ErrInvalidTransition,
-			checkMock: func(t *testing.T, m *mockOrderRepo) {
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
 				if m.updateTransitionCalled {
 					t.Error("expected UpdateStatus NOT to be called for forbidden transition")
 				}
@@ -271,11 +271,11 @@ func TestUpdateOrderTransition(t *testing.T) {
 		{
 			name:         "incorrect transition: pending -> completed",
 			targetStatus: "completed",
-			mockRepo: mockOrderRepo{
+			mockRepo: mockOrderRepository{
 				getByIDRes: &model.Order{ID: 1, Status: model.StatusCompleted},
 			},
 			wantErr: domain.ErrInvalidTransition,
-			checkMock: func(t *testing.T, m *mockOrderRepo) {
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
 				if m.updateTransitionCalled {
 					t.Error("expected UpdateStatus NOT to be called for incorrect transition")
 				}
@@ -284,9 +284,9 @@ func TestUpdateOrderTransition(t *testing.T) {
 		{
 			name:         "invalid status value",
 			targetStatus: "trash",
-			mockRepo:     mockOrderRepo{},
+			mockRepo:     mockOrderRepository{},
 			wantErr:      domain.ErrNotValidTransition,
-			checkMock: func(t *testing.T, m *mockOrderRepo) {
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
 				if m.getByIDCalled || m.updateTransitionCalled {
 					t.Error("expected early return for unknown status value")
 				}
@@ -295,12 +295,12 @@ func TestUpdateOrderTransition(t *testing.T) {
 		{
 			name:         "order not found",
 			targetStatus: "processing",
-			mockRepo: mockOrderRepo{
+			mockRepo: mockOrderRepository{
 				getByIDRes: nil,
 				getByIDErr: domain.ErrOrderNotFound,
 			},
 			wantErr: domain.ErrOrderNotFound,
-			checkMock: func(t *testing.T, m *mockOrderRepo) {
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
 				if m.updateTransitionCalled {
 					t.Error("expected UpdateStatus NOT to be called when order missing")
 				}
@@ -309,12 +309,12 @@ func TestUpdateOrderTransition(t *testing.T) {
 		{
 			name:         "database error (any)",
 			targetStatus: "processing",
-			mockRepo: mockOrderRepo{
+			mockRepo: mockOrderRepository{
 				getByIDRes: nil,
 				getByIDErr: errors.New("database error"),
 			},
 			wantAnyError: true,
-			checkMock: func(t *testing.T, m *mockOrderRepo) {
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
 				if m.updateTransitionCalled {
 					t.Error("expected UpdateStatus NOT to be called when database error")
 				}
@@ -346,18 +346,18 @@ func TestListOrders(t *testing.T) {
 		name         string
 		page         int
 		limit        int
-		mockRepo     mockOrderRepo
+		mockRepo     mockOrderRepository
 		wantErr      error
 		wantAnyError bool
 		checkData    func(t *testing.T, items []*model.Order, total int)
-		checkMock    func(t *testing.T, m *mockOrderRepo)
+		checkMock    func(t *testing.T, m *mockOrderRepository)
 	}{
 		{name: "invalid page (zero",
 			page:     0,
 			limit:    20,
-			mockRepo: mockOrderRepo{},
+			mockRepo: mockOrderRepository{},
 			wantErr:  domain.ErrInvalidPage,
-			checkMock: func(t *testing.T, m *mockOrderRepo) {
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
 				if m.listOrdersCalled {
 					t.Error("expected ListOrders NOT to be called for invalid page")
 				}
@@ -367,9 +367,9 @@ func TestListOrders(t *testing.T) {
 			name:     "invalid page (neagtive)",
 			page:     -5,
 			limit:    20,
-			mockRepo: mockOrderRepo{},
+			mockRepo: mockOrderRepository{},
 			wantErr:  domain.ErrInvalidPage,
-			checkMock: func(t *testing.T, m *mockOrderRepo) {
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
 				if m.listOrdersCalled {
 					t.Error("expected ListOrders NOT to be called for negative page")
 				}
@@ -379,9 +379,9 @@ func TestListOrders(t *testing.T) {
 			name:     "invalid limit (zero)",
 			page:     1,
 			limit:    0,
-			mockRepo: mockOrderRepo{},
+			mockRepo: mockOrderRepository{},
 			wantErr:  domain.ErrInvalidLimit,
-			checkMock: func(t *testing.T, m *mockOrderRepo) {
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
 				if m.listOrdersCalled {
 					t.Error("expected ListOrders NOT to be called for invalid limit")
 				}
@@ -391,9 +391,9 @@ func TestListOrders(t *testing.T) {
 			name:     "invalid limit (too large)",
 			page:     1,
 			limit:    101,
-			mockRepo: mockOrderRepo{},
+			mockRepo: mockOrderRepository{},
 			wantErr:  domain.ErrInvalidLimit,
-			checkMock: func(t *testing.T, m *mockOrderRepo) {
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
 				if m.listOrdersCalled {
 					t.Error("expected ListOrders NOT to be called for limit > 100")
 				}
@@ -403,7 +403,7 @@ func TestListOrders(t *testing.T) {
 			name:  "success: page=1, limit=20",
 			page:  1,
 			limit: 20,
-			mockRepo: mockOrderRepo{
+			mockRepo: mockOrderRepository{
 				listOrdersRes: []*model.Order{
 					{ID: 1, CustomerName: "Matthew", Amount: 100, Status: model.StatusPending},
 					{ID: 2, CustomerName: "Anastasia", Amount: 250, Status: model.StatusProcessing}},
@@ -418,7 +418,7 @@ func TestListOrders(t *testing.T) {
 					t.Errorf("got total=%d, want 2", total)
 				}
 			},
-			checkMock: func(t *testing.T, m *mockOrderRepo) {
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
 				if !m.listOrdersCalled {
 					t.Error("expected ListOrders to be called")
 				}
@@ -428,7 +428,7 @@ func TestListOrders(t *testing.T) {
 			name:  "success: empty page (offset > total)",
 			page:  10,
 			limit: 10,
-			mockRepo: mockOrderRepo{
+			mockRepo: mockOrderRepository{
 				listOrdersRes:   []*model.Order{},
 				listOrdersTotal: 5,
 			},
@@ -441,7 +441,7 @@ func TestListOrders(t *testing.T) {
 					t.Errorf("got total=%d, want 5", total)
 				}
 			},
-			checkMock: func(t *testing.T, m *mockOrderRepo) {
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
 				if !m.listOrdersCalled {
 					t.Error("expected ListOrders to be called even for empty page")
 				}
@@ -451,7 +451,7 @@ func TestListOrders(t *testing.T) {
 			name:  "repository error (db failure) (any)",
 			page:  1,
 			limit: 20,
-			mockRepo: mockOrderRepo{
+			mockRepo: mockOrderRepository{
 				listOrdersRes:   nil,
 				listOrdersTotal: 0,
 				listOrdersErr:   errors.New("database timeout"),
@@ -465,7 +465,7 @@ func TestListOrders(t *testing.T) {
 					t.Error("expected 0 total on repository error")
 				}
 			},
-			checkMock: func(t *testing.T, m *mockOrderRepo) {
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
 				if !m.listOrdersCalled {
 					t.Error("expected ListOrders to be called")
 				}
@@ -482,7 +482,7 @@ func TestListOrders(t *testing.T) {
 			items, total, err := svc.ListOrders(ctx, tt.limit, tt.page)
 
 			if !errors.Is(err, tt.wantErr) && !tt.wantAnyError {
-				t.Errorf("got error %v, want %v", err, tt.wantErr)
+				t.Errorf("got error %+v, want %+v", err, tt.wantErr)
 			}
 
 			if tt.checkData != nil && err == nil {

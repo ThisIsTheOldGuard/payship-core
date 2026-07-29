@@ -29,7 +29,7 @@ import (
 
 // ErrorResponse - структура представления ошибки.
 type ErrorResponse struct {
-	Error string `json:"error"`
+	Err string `json:"error"`
 }
 
 // sendJSONError отправляет стандартизированный JSON-ответ об ошибке.
@@ -51,7 +51,7 @@ type ErrorResponse struct {
 func sendJSONError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(ErrorResponse{Error: message})
+	_ = json.NewEncoder(w).Encode(ErrorResponse{Err: message})
 }
 
 // CreateOrderHandler создаёт хендлер для эндпоинта POST /order.

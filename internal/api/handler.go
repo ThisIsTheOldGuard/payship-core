@@ -201,7 +201,7 @@ func ListOrdersHandler(svc service.OrderService) http.HandlerFunc {
 		orders, total, err := svc.ListOrders(r.Context(), limit, page)
 		if err != nil {
 			switch {
-			case errors.Is(err, domain.ErrOrderNotFound),
+			case errors.Is(err, domain.ErrOrdersNotFound),
 				errors.Is(err, domain.ErrInvalidPage),
 				errors.Is(err, domain.ErrInvalidLimit):
 				sendJSONError(w, http.StatusNotFound, err.Error())

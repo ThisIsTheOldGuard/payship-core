@@ -448,6 +448,23 @@ func TestListOrders(t *testing.T) {
 			},
 		},
 		{
+			name:  "no orders found",
+			page:  1,
+			limit: 10,
+			mockRepo: mockOrderRepository{
+				listOrdersRes:   nil,
+				listOrdersTotal: 0,
+				listOrdersErr:   nil,
+			},
+			wantErr: domain.ErrOrdersNotFound,
+			checkMock: func(t *testing.T, m *mockOrderRepository) {
+				if !m.listOrdersCalled {
+					t.Error("expected ListOrders to be called")
+				}
+			},
+		},
+		// Дописать тест, когда заказов не найдено
+		{
 			name:  "repository error (db failure) (any)",
 			page:  1,
 			limit: 20,

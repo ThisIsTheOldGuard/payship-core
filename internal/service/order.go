@@ -297,6 +297,10 @@ func (s *orderService) ListOrders(ctx context.Context, limit, page int) ([]*mode
 		return nil, 0, fmt.Errorf("service.ListOrders: %w", err)
 	}
 
+	if orders == nil {
+		return nil, 0, domain.ErrOrdersNotFound
+	}
+
 	return orders, count, nil
 }
 

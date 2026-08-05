@@ -75,6 +75,29 @@ func checkOrder(wantOrder *model.Order, w *httptest.ResponseRecorder) error {
 	return nil
 }
 
+func checkOrderList(wantOrderList *model.OrderListResponse, w *httptest.ResponseRecorder) error {
+
+	var got model.OrderListResponse
+
+	if err := json.NewDecoder(w.Body).Decode(&got); err != nil {
+		return fmt.Errorf("decode error: %v\nBody: %s", err, w.Body.String())
+	}
+	if got.Total != wantOrderList.Total || got.Page != wantOrderList.Page || got.Limit != wantOrderList.Limit {
+		return fmt.Errorf("pagination mismatch: got %+v, want %+v", got, wantOrderList)
+	}
+	if len(got.Items) != len(wantOrderList.Items) {
+		return fmt.Errorf("items count: got %d, want %d", len(got.Items), len(wantOrderList.Items))
+	}
+	for i, want := range wantOrderList.Items {
+		got := got.Items[i]
+		if got.ID != want.ID || got.CustomerName != want.CustomerName || got.Amount != want.Amount || got.Status != want.Status {
+			return fmt.Errorf("item[%d] mismatch: got %+v, want %+v", i, got, want)
+		}
+	}
+
+	return nil
+}
+
 func TestCreateOrderHandler(t *testing.T) {
 	t.Parallel()
 
@@ -278,6 +301,171 @@ func TestGetOrderHandler(t *testing.T) {
 
 			if tt.wantOrder != nil {
 				err := checkOrder(tt.wantOrder, w)
+				if err != nil {
+					t.Error(err.Error())
+				}
+			}
+
+			if tt.wantErr != (ErrorResponse{}) {
+				var gotErr ErrorResponse
+				if err := json.NewDecoder(w.Body).Decode(&gotErr); err != nil {
+					t.Fatalf("failed to decode error JSON: %v", err)
+				}
+				if gotErr != tt.wantErr {
+					t.Errorf("got error %+v, want %+v", gotErr, tt.wantErr)
+				}
+			}
+		})
+	}
+}
+
+func TestListOrdersHandler(t *testing.T) {
+	t.Parallel()
+
+	validOrderList := []*model.Order{
+		&model.Order{
+			ID:           1,
+			CustomerName: "Matthew",
+			Amount:       150.50,
+			Status:       model.StatusPending,
+			CreatedAt:    time.Now()},
+		&model.Order{
+			ID:           2,
+			CustomerName: "Nastya",
+			Amount:       150.50,
+			Status:       model.StatusProcessing,
+			CreatedAt:    time.Now()},
+	}
+
+	tests := []struct {
+		name          string
+		page          string
+		limit         string
+		mockSvc       *mockOrderService
+		wantStatus    int
+		wantOrderList *model.OrderListResponse
+		wantErr       ErrorResponse
+	}{
+		{
+			name:  "valid request: page=1, limit=10",
+			page:  "1",
+			limit: "10",
+			mockSvc: &mockOrderService{
+				listFunc: func(ctx context.Context, page, limit int) ([]*model.Order, int, error) {
+					return validOrderList, 2, nil
+				},
+			},
+			wantStatus: http.StatusOK,
+			wantOrderList: &model.OrderListResponse{
+				Items: validOrderList,
+				Total: 2,
+				Page:  1,
+				Limit: 10,
+			},
+		},
+		{
+			name: "valid request: empty page and limit",
+			mockSvc: &mockOrderService{
+				listFunc: func(ctx context.Context, page, limit int) ([]*model.Order, int, error) {
+					return validOrderList, 2, nil
+				},
+			},
+			wantStatus: http.StatusOK,
+			wantOrderList: &model.OrderListResponse{
+				Items: validOrderList,
+				Total: 2,
+				Page:  1,
+				Limit: 20,
+			},
+		},
+		{
+			name:       "invalid request not valid page",
+			page:       "odin",
+			limit:      "10",
+			mockSvc:    &mockOrderService{},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    ErrorResponse{Err: "invalid page value"},
+		},
+		{
+			name:       "invalid request not valid limit",
+			page:       "1",
+			limit:      "desyat",
+			mockSvc:    &mockOrderService{},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    ErrorResponse{Err: "invalid limit value"},
+		},
+		{
+			name:  "invalid request page less than zero",
+			page:  "-10",
+			limit: "20",
+			mockSvc: &mockOrderService{
+				listFunc: func(ctx context.Context, page, limit int) ([]*model.Order, int, error) {
+					return nil, 0, domain.ErrInvalidPage
+				},
+			},
+			wantStatus: http.StatusNotFound,
+			wantErr:    ErrorResponse{Err: ("page must be >= 1")},
+		},
+		{
+			name:  "invalid request exceeding the limit",
+			page:  "1",
+			limit: "101",
+			mockSvc: &mockOrderService{
+				listFunc: func(ctx context.Context, page, limit int) ([]*model.Order, int, error) {
+					return nil, 0, domain.ErrInvalidLimit
+				},
+			},
+			wantStatus: http.StatusNotFound,
+			wantErr:    ErrorResponse{Err: "limit must be between 1 and 100"},
+		},
+		{
+			name:  "invalid request orders not found",
+			page:  "50",
+			limit: "10",
+			mockSvc: &mockOrderService{
+				listFunc: func(ctx context.Context, page, limit int) ([]*model.Order, int, error) {
+					return nil, 0, domain.ErrOrdersNotFound
+				},
+			},
+			wantStatus: http.StatusNotFound,
+			wantErr:    ErrorResponse{Err: "orders not found"},
+		},
+		{
+			name:  "internal error",
+			page:  "1",
+			limit: "20",
+			mockSvc: &mockOrderService{
+				listFunc: func(ctx context.Context, page, limit int) ([]*model.Order, int, error) {
+					return nil, 0, errors.New("database timeout")
+				},
+			},
+			wantStatus: http.StatusInternalServerError,
+			wantErr:    ErrorResponse{Err: "internal error"},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			mux := http.NewServeMux()
+			mux.HandleFunc("GET /orders", ListOrdersHandler(tt.mockSvc))
+
+			route := fmt.Sprintf("/orders?page=%s&limit=%s", tt.page, tt.limit)
+
+			req := httptest.NewRequest(http.MethodGet, route, nil)
+			w := httptest.NewRecorder()
+
+			mux.ServeHTTP(w, req)
+
+			if w.Code != tt.wantStatus {
+				t.Errorf("got status %d, want %d\nBody: %s", w.Code, tt.wantStatus, w.Body.String())
+				return
+			}
+
+			if tt.wantOrderList != nil {
+				err := checkOrderList(tt.wantOrderList, w)
 				if err != nil {
 					t.Error(err.Error())
 				}

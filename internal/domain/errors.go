@@ -9,6 +9,8 @@ var (
 	ErrInvalidAmount = errors.New("amount must be greater than 0")
 	// ErrOrderNotFound возвращается, когда запрошенный заказ не существует.
 	ErrOrderNotFound = errors.New("order not found")
+	// ErrOrdersNotFound возвращается, когда запрошенных заказаов не найдено
+	ErrOrdersNotFound = errors.New("orders not found")
 	// ErrInvalidPage возвращается при попытке запроса несуществующей страницы.
 	ErrInvalidPage = errors.New("page must be >= 1")
 	// ErrInvalidLimit возвращается при превышении лимита запрашиваемых страниц.

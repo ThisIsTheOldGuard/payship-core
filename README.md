@@ -113,8 +113,7 @@ for i in {1..10}; do curl -s http://localhost:8080/debug/db/slow > /dev/null & d
 go test ./internal/service -cover
 
 # HTML-отчёт
-go test ./internal/service -coverprofile=coverage.out
-go tool cover -html=coverage.out
+go test ./internal/api -coverprofile=coverage.out && go tool cover -html=coverage.out -o coverage.html
 xdg-open coverage.html
 # Открываем результат html с возможностью просмотра покрытия кода
 ```

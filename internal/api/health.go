@@ -6,9 +6,12 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// Pinger -  интерфейс для проверки доступности БД.
+type Pinger interface {
+	Ping(context.Context) error
+}
 
 // Вовзможно в будущем надо сделать ответ в виде перечисления одного из внутренних статусов
 type HealthResponse struct {
@@ -91,12 +94,12 @@ func HealthHandler() http.HandlerFunc {
 //
 //	$ curl http://localhost:8080/ready
 //	//Ответ: {"status":"Ready"}
-func ReadyHandler(pool *pgxpool.Pool) http.HandlerFunc {
+func ReadyHandler(p Pinger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), time.Second*2)
 		defer cancel()
 
-		if err := pool.Ping(ctx); err != nil {
+		if err := p.Ping(ctx); err != nil {
 			slog.Error("Readiness check failed", "error", err)
 			sendJSONError(w, http.StatusServiceUnavailable, "Database is unavailable")
 			return

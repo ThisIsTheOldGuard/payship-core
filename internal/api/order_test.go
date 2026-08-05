@@ -225,6 +225,35 @@ func TestGetOrderHandler(t *testing.T) {
 				Status:       model.StatusPending,
 			},
 		},
+		{
+			name:       "invalid reqID",
+			reqID:      "sorok_dva",
+			mockSvc:    &mockOrderService{},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    ErrorResponse{Err: "invalid order id"},
+		},
+		{
+			name:  "order not found",
+			reqID: "54321",
+			mockSvc: &mockOrderService{
+				getFunc: func(ctx context.Context, id int64) (*model.Order, error) {
+					return nil, domain.ErrOrderNotFound
+				},
+			},
+			wantStatus: http.StatusNotFound,
+			wantErr:    ErrorResponse{Err: "order not found"},
+		},
+		{
+			name:  "internal error",
+			reqID: "42",
+			mockSvc: &mockOrderService{
+				getFunc: func(ctx context.Context, id int64) (*model.Order, error) {
+					return nil, errors.New("database timeout")
+				},
+			},
+			wantStatus: http.StatusInternalServerError,
+			wantErr:    ErrorResponse{Err: "internal error"},
+		},
 	}
 
 	for _, tt := range tests {

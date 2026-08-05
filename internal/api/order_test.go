@@ -1,14 +1,13 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -175,20 +174,19 @@ func TestCreateOrderHandler(t *testing.T) {
 
 	for _, tt := range tests {
 
-		testLogger := slog.New(slog.NewTextHandler(t.Output(), nil))
-		slog.SetDefault(testLogger)
-
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			req := httptest.NewRequest(http.MethodPost, "/order", bytes.NewReader([]byte(tt.reqBody)))
+			mux := http.NewServeMux()
+			mux.HandleFunc("POST /order", CreateOrderHandler(tt.mockSvc))
+			route := "/order"
+
+			req := httptest.NewRequest(http.MethodPost, route, strings.NewReader(tt.reqBody))
 			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
 
-			handler := CreateOrderHandler(tt.mockSvc)
-
-			handler.ServeHTTP(w, req)
+			mux.ServeHTTP(w, req)
 
 			if w.Code != tt.wantStatus {
 				t.Errorf("got status %d, want %d\nBody: %s", w.Code, tt.wantStatus, w.Body.String())
@@ -469,6 +467,128 @@ func TestListOrdersHandler(t *testing.T) {
 				if err != nil {
 					t.Error(err.Error())
 				}
+			}
+
+			if tt.wantErr != (ErrorResponse{}) {
+				var gotErr ErrorResponse
+				if err := json.NewDecoder(w.Body).Decode(&gotErr); err != nil {
+					t.Fatalf("failed to decode error JSON: %v", err)
+				}
+				if gotErr != tt.wantErr {
+					t.Errorf("got error %+v, want %+v", gotErr, tt.wantErr)
+				}
+			}
+		})
+	}
+}
+
+func TestUpdateOrderTransitionHandler(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		orderId    string
+		reqBody    string
+		mockSvc    *mockOrderService
+		wantStatus int
+		wantErr    ErrorResponse
+	}{
+		{
+			name:    "valid request: id=1",
+			orderId: "1",
+			reqBody: `{"status":"processing"}`,
+			mockSvc: &mockOrderService{
+				updateTransitionFunc: func(ctx context.Context, id int64, status string) error {
+					return nil
+				},
+			},
+			wantStatus: http.StatusNoContent,
+		},
+		{
+			name:       "not valid request: id=odin",
+			orderId:    "odin",
+			reqBody:    `{"status":"processing"}`,
+			mockSvc:    &mockOrderService{},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    ErrorResponse{Err: "invalid order id"},
+		},
+		{
+			name:       "not valid request: wrong body",
+			orderId:    "1",
+			reqBody:    `{"name":"processing"}`,
+			mockSvc:    &mockOrderService{},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    ErrorResponse{Err: "invalid JSON body or unknown fields"},
+		},
+		{
+			name:    "not valid transition",
+			orderId: "1",
+			reqBody: `{"status":"working"}`,
+			mockSvc: &mockOrderService{
+				updateTransitionFunc: func(ctx context.Context, id int64, status string) error {
+					return domain.ErrNotValidTransition
+				},
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    ErrorResponse{Err: "not valid transition"},
+		},
+		{
+			name:    "order not found",
+			orderId: "1000",
+			reqBody: `{"status":"processing"}`,
+			mockSvc: &mockOrderService{
+				updateTransitionFunc: func(ctx context.Context, id int64, status string) error {
+					return domain.ErrOrderNotFound
+				},
+			},
+			wantStatus: http.StatusNotFound,
+			wantErr:    ErrorResponse{Err: "order not found"},
+		},
+		{
+			name:    "not validate transition",
+			orderId: "1",
+			reqBody: `{"status":"processing"}`,
+			mockSvc: &mockOrderService{
+				updateTransitionFunc: func(ctx context.Context, id int64, status string) error {
+					return domain.ErrInvalidTransition
+				},
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    ErrorResponse{Err: "invalid transition"},
+		},
+		{
+			name:    "internal error",
+			orderId: "12",
+			reqBody: `{"status":"processing"}`,
+			mockSvc: &mockOrderService{
+				updateTransitionFunc: func(ctx context.Context, id int64, status string) error {
+					return errors.New("database timeout")
+				},
+			},
+			wantStatus: http.StatusInternalServerError,
+			wantErr:    ErrorResponse{Err: "internal error"},
+		},
+	}
+
+	for _, tt := range tests {
+
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			mux := http.NewServeMux()
+			mux.HandleFunc("POST /order/{id}/transitions", UpdateOrderTransitionHandler(tt.mockSvc))
+			route := fmt.Sprintf("/order/%s/transitions", tt.orderId)
+
+			req := httptest.NewRequest(http.MethodPost, route, strings.NewReader(tt.reqBody))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+
+			mux.ServeHTTP(w, req)
+
+			if w.Code != tt.wantStatus {
+				t.Errorf("got status %d, want %d\nBody: %s", w.Code, tt.wantStatus, w.Body.String())
+				return
 			}
 
 			if tt.wantErr != (ErrorResponse{}) {

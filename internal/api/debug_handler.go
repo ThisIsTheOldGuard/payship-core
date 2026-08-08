@@ -29,6 +29,6 @@ func Debug_DB_Slow(pool *pgxpool.Pool) http.HandlerFunc {
 		}
 		defer conn.Release()
 		time.Sleep(20 * time.Second)
-		w.Write([]byte("done"))
+		_, _ = w.Write([]byte("done"))
 	}
 }

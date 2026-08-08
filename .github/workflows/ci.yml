@@ -6,15 +6,32 @@ on:
     branches: [ main ]
 
 jobs:
-  hello-world:
+  verify:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Say Hello
-        run: echo "Hello, GitHub Actions! This is my first workflow!"
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.25'
+          cache: true
 
-      - name: Show date
-        run: date
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run linter
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: latest
+
+      - name: Run tests with race detector
+        run: go test ./... -race -coverprofile=coverage.out -covermode=atomic
+
+      - name: Check coverage >= 80%
+        run: |
+          coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+          echo "Coverage: ${coverage}%"
+          awk "BEGIN {exit !($coverage >= 80)}"

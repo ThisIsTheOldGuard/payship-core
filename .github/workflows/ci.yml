@@ -29,7 +29,7 @@ jobs:
 
       - name: Run tests with race detector
         #run: go test ./... -race -coverprofile=coverage.out -covermode=atomic
-        run: go test ./internal/api ./internal/service -race -coverprofile
+        run: go test ./internal/api ./internal/service -race -coverprofile=coverage.out -covermode=atomic
 
       - name: Check coverage >= 80%
         run: |

@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ThisIsTheOldGuard/payship-core/internal/cache"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -87,6 +88,7 @@ func (r *statusRecorder) WriteHeader(statusCode int) {
 func RegisterMetrics() {
 	prometheus.MustRegister(httpRequestsTotal)
 	prometheus.MustRegister(httpRequestDuration)
+	cache.RegisterCacheMetrics()
 }
 
 // MetricsMiddleware - HTTP-middleware для сбора метрик и логирования запросов.

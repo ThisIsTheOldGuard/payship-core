@@ -16,13 +16,14 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/ThisIsTheOldGuard/payship-core/internal/domain"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/model"
-	"github.com/ThisIsTheOldGuard/payship-core/internal/service"
 )
 
 // Для валидации также можно использовать https://github.com/go-playground/validator
@@ -64,7 +65,7 @@ func sendJSONError(w http.ResponseWriter, status int, message string) {
 //   - Возвращает 201 Created с JSON-телом или ошибку.
 //
 // Параметры:
-//   - svc: экземпляр сервиса для бизнес-логики.
+//   - *Dependencies: структура зависимостей
 //
 // Возвращает:
 //   - http.HandlerFunc: готовый хендлер для регистрации в mux.
@@ -75,7 +76,7 @@ func sendJSONError(w http.ResponseWriter, status int, message string) {
 //	  -H "Content-Type: application/json" \
 //	  -d '{"customer_name":"Alice","amount":100}'
 //	//Ответ: {"id":1,"customer_name":"Alice","amount":100,"status":"pending",...}
-func CreateOrderHandler(svc service.OrderService) http.HandlerFunc {
+func CreateOrderHandler(deps *Dependencies) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Разбор Json
@@ -92,7 +93,7 @@ func CreateOrderHandler(svc service.OrderService) http.HandlerFunc {
 			return
 		}
 
-		order, err := svc.CreateOrder(r.Context(), req.CustomerName, req.Amount)
+		order, err := deps.Svc.CreateOrder(r.Context(), req.CustomerName, req.Amount)
 		if err != nil {
 			switch {
 			case errors.Is(err, domain.ErrEmptyCustomer), errors.Is(err, domain.ErrInvalidAmount):
@@ -103,6 +104,12 @@ func CreateOrderHandler(svc service.OrderService) http.HandlerFunc {
 			}
 			return
 		}
+
+		// Cache
+		cacheKey := fmt.Sprintf("order:id:%d", order.ID)
+		_ = deps.Cache.Delete(r.Context(), cacheKey)
+		_ = deps.Cache.Delete(r.Context(), fmt.Sprintf("orders:page:1:limit:10"))
+		_ = deps.Cache.Delete(r.Context(), fmt.Sprintf("orders:page:1:limit:20"))
 
 		// Ответ
 		w.Header().Set("Content-Type", "application/json")
@@ -122,7 +129,7 @@ func CreateOrderHandler(svc service.OrderService) http.HandlerFunc {
 //   - Возвращает 200 OK с заказом или ошибку.
 //
 // Параметры:
-//   - svc: экземпляр сервиса для бизнес-логики.
+//   - *Dependencies: структура зависимостей
 //
 // Возвращает:
 //   - http.HandlerFunc: готовый хендлер для регистрации в mux.
@@ -131,7 +138,7 @@ func CreateOrderHandler(svc service.OrderService) http.HandlerFunc {
 //
 //	$ curl http://localhost:8080/order/42
 //	//Ответ: {"id":42,"customer_name":"Bob","amount":50.0,...}
-func GetOrderHandler(svc service.OrderService) http.HandlerFunc {
+func GetOrderHandler(deps *Dependencies) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		idStr := r.PathValue("id")
@@ -142,7 +149,17 @@ func GetOrderHandler(svc service.OrderService) http.HandlerFunc {
 			return
 		}
 
-		order, err := svc.GetOrder(r.Context(), id)
+		cacheKey := fmt.Sprintf("order:id:%d", id)
+		if cachedData, err := deps.Cache.Get(r.Context(), cacheKey); err == nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Cache-Control", "max-age=30, public")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(cachedData))
+
+			return
+		}
+
+		order, err := deps.Svc.GetOrder(r.Context(), id)
 		if err != nil {
 			if errors.Is(err, domain.ErrOrderNotFound) {
 				sendJSONError(w, http.StatusNotFound, err.Error())
@@ -152,6 +169,9 @@ func GetOrderHandler(svc service.OrderService) http.HandlerFunc {
 			sendJSONError(w, http.StatusInternalServerError, "internal error")
 			return
 		}
+
+		jsonData, _ := json.Marshal(order)
+		_ = deps.Cache.Set(r.Context(), cacheKey, string(jsonData), 30*time.Second)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -169,7 +189,7 @@ func GetOrderHandler(svc service.OrderService) http.HandlerFunc {
 //   - Возвращает 200 OK с пагинированным ответом или ошибку.
 //
 // Параметры:
-//   - svc: экземпляр сервиса для бизнес-логики.
+//   - *Dependencies: структура зависимостей
 //
 // Возвращает:
 //   - http.HandlerFunc: готовый хендлер для регистрации в mux.
@@ -178,11 +198,11 @@ func GetOrderHandler(svc service.OrderService) http.HandlerFunc {
 //
 //	$ curl "http://localhost:8080/orders?page=1&limit=10"
 //	//Ответ: {"items":[...],"total":150,"page":1,"limit":10}
-func ListOrdersHandler(svc service.OrderService) http.HandlerFunc {
+func ListOrdersHandler(deps *Dependencies) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		page := 1
-		limit := 20
+		limit := 10
 		if p := r.URL.Query().Get("page"); p != "" {
 			val, err := strconv.Atoi(p)
 			if err != nil {
@@ -198,7 +218,18 @@ func ListOrdersHandler(svc service.OrderService) http.HandlerFunc {
 			limit = val
 		}
 
-		orders, total, err := svc.ListOrders(r.Context(), limit, page)
+		cacheKey := fmt.Sprintf("orders:page:%d:limit:%d", page, limit)
+
+		if cachedData, err := deps.Cache.Get(r.Context(), cacheKey); err == nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Cache-Control", "max-age=30, public")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(cachedData))
+
+			return
+		}
+
+		orders, total, err := deps.Svc.ListOrders(r.Context(), limit, page)
 		if err != nil {
 			switch {
 			case errors.Is(err, domain.ErrOrdersNotFound),
@@ -218,6 +249,10 @@ func ListOrdersHandler(svc service.OrderService) http.HandlerFunc {
 			Page:  page,
 			Limit: limit,
 		}
+
+		jsonData, _ := json.Marshal(response)
+		_ = deps.Cache.Set(r.Context(), cacheKey, string(jsonData), 30*time.Second)
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(response)
@@ -236,7 +271,7 @@ func ListOrdersHandler(svc service.OrderService) http.HandlerFunc {
 //   - Возвращает 200 OK при успехе или ошибку.
 //
 // Параметры:
-//   - svc: экземпляр сервиса для бизнес-логики.
+//   - *Dependencies: структура зависимостей
 //
 // Возвращает:
 //   - http.HandlerFunc: готовый хендлер для регистрации в mux.
@@ -247,7 +282,7 @@ func ListOrdersHandler(svc service.OrderService) http.HandlerFunc {
 //	  -H "Content-Type: application/json" \
 //	  -d '{"status":"processing"}'
 //	//Ответ: 201
-func UpdateOrderTransitionHandler(svc service.OrderService) http.HandlerFunc {
+func UpdateOrderTransitionHandler(deps *Dependencies) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		idStr := r.PathValue("id")
@@ -271,7 +306,7 @@ func UpdateOrderTransitionHandler(svc service.OrderService) http.HandlerFunc {
 			return
 		}
 
-		if err := svc.UpdateOrderTransition(r.Context(), id, transition.Status); err != nil {
+		if err := deps.Svc.UpdateOrderTransition(r.Context(), id, transition.Status); err != nil {
 			switch {
 			case errors.Is(err, domain.ErrNotValidTransition),
 				errors.Is(err, domain.ErrInvalidTransition):
@@ -284,6 +319,10 @@ func UpdateOrderTransitionHandler(svc service.OrderService) http.HandlerFunc {
 			}
 			return
 		}
+
+		cacheKey := fmt.Sprintf("order:id:%d", id)
+		_ = deps.Cache.Delete(r.Context(), cacheKey)
+		_ = deps.Cache.Delete(r.Context(), fmt.Sprintf("orders:page:1:limit:10"))
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNoContent)

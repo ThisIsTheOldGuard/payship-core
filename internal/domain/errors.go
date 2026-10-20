@@ -19,4 +19,6 @@ var (
 	ErrNotValidTransition = errors.New("not valid transition")
 	// ErrInvalidTransition возвращается при попытке недопустимого перехода статуса.
 	ErrInvalidTransition = errors.New("invalid transition")
+	// ErrCacheDisabled возращается, когда Redis упал или не был подключен
+	ErrCacheDisabled = errors.New("cache disabled")
 )

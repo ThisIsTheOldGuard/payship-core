@@ -50,6 +50,37 @@ func (m *mockOrderService) UpdateOrderTransition(ctx context.Context, id int64, 
 	return nil
 }
 
+type mockCache struct {
+	getFunc    func(ctx context.Context, key string) (string, error)
+	setFunc    func(ctx context.Context, key, value string, exp time.Duration) error
+	deleteFunc func(ctx context.Context, key string) error
+}
+
+func (m *mockCache) Get(ctx context.Context, key string) (string, error) {
+	if m.getFunc != nil {
+		return m.getFunc(ctx, key)
+	}
+	return "", errors.New("cache miss") // Считаем что кэш у нас всегда пустой
+}
+
+func (m *mockCache) Set(ctx context.Context, key, value string, exp time.Duration) error {
+	if m.setFunc != nil {
+		return m.setFunc(ctx, key, value, exp)
+	}
+	return nil
+}
+
+func (m *mockCache) Delete(ctx context.Context, key string) error {
+	if m.deleteFunc != nil {
+		return m.deleteFunc(ctx, key)
+	}
+	return nil
+}
+
+func (m *mockCache) Ping(ctx context.Context) error {
+	return nil
+}
+
 func checkOrder(wantOrder *model.Order, w *httptest.ResponseRecorder) error {
 
 	var got model.Order
@@ -104,6 +135,7 @@ func TestCreateOrderHandler(t *testing.T) {
 		name       string
 		reqBody    string
 		mockSvc    *mockOrderService
+		mockCache  *mockCache
 		wantStatus int
 		wantOrder  *model.Order
 		wantErr    ErrorResponse
@@ -122,6 +154,14 @@ func TestCreateOrderHandler(t *testing.T) {
 					}, nil
 				},
 			},
+			mockCache: &mockCache{
+				deleteFunc: func(ctx context.Context, key string) error {
+					if key != "order:id:42" {
+						return fmt.Errorf("unexpected cache key deleted: %s", key)
+					}
+					return nil
+				},
+			},
 			wantStatus: http.StatusCreated,
 			wantOrder: &model.Order{
 				ID:           42,
@@ -134,6 +174,7 @@ func TestCreateOrderHandler(t *testing.T) {
 			name:       "invalid JSON request",
 			reqBody:    `{"broken":nil}`,
 			mockSvc:    &mockOrderService{},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusBadRequest,
 			wantErr:    ErrorResponse{Err: "invalid JSON body or unknown fields"},
 		},
@@ -145,6 +186,7 @@ func TestCreateOrderHandler(t *testing.T) {
 					return nil, domain.ErrEmptyCustomer
 				},
 			},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusBadRequest,
 			wantErr:    ErrorResponse{Err: "customer_name is required"},
 		},
@@ -156,6 +198,7 @@ func TestCreateOrderHandler(t *testing.T) {
 					return nil, domain.ErrInvalidAmount
 				},
 			},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusBadRequest,
 			wantErr:    ErrorResponse{Err: "amount must be greater than 0"},
 		},
@@ -167,6 +210,7 @@ func TestCreateOrderHandler(t *testing.T) {
 					return nil, errors.New("database timeout")
 				},
 			},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusInternalServerError,
 			wantErr:    ErrorResponse{Err: "internal error"},
 		},
@@ -179,7 +223,13 @@ func TestCreateOrderHandler(t *testing.T) {
 			t.Parallel()
 
 			mux := http.NewServeMux()
-			mux.HandleFunc("POST /order", CreateOrderHandler(tt.mockSvc))
+
+			deps := &Dependencies{
+				Svc:   tt.mockSvc,
+				Cache: tt.mockCache,
+			}
+
+			mux.HandleFunc("POST /order", CreateOrderHandler(deps))
 			route := "/order"
 
 			req := httptest.NewRequest(http.MethodPost, route, strings.NewReader(tt.reqBody))
@@ -220,6 +270,7 @@ func TestGetOrderHandler(t *testing.T) {
 		name       string
 		reqID      string
 		mockSvc    *mockOrderService
+		mockCache  *mockCache
 		wantStatus int
 		wantOrder  *model.Order
 		wantErr    ErrorResponse
@@ -238,6 +289,20 @@ func TestGetOrderHandler(t *testing.T) {
 					}, nil
 				},
 			},
+			mockCache: &mockCache{
+				setFunc: func(ctx context.Context, key string, value string, exp time.Duration) error {
+					if key != "order:id:42" {
+						return fmt.Errorf("an unexpected cache key has been added: %s", key)
+					}
+					return nil
+				},
+				getFunc: func(ctx context.Context, key string) (string, error) {
+					if key != "order:id:42" {
+						return "", fmt.Errorf("an unexpected cache key has been requested: %s", key)
+					}
+					return "", errors.New("miss cache")
+				},
+			},
 			wantStatus: http.StatusOK,
 			wantOrder: &model.Order{
 				ID:           42,
@@ -250,6 +315,7 @@ func TestGetOrderHandler(t *testing.T) {
 			name:       "invalid reqID",
 			reqID:      "sorok_dva",
 			mockSvc:    &mockOrderService{},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusBadRequest,
 			wantErr:    ErrorResponse{Err: "invalid order id"},
 		},
@@ -259,6 +325,20 @@ func TestGetOrderHandler(t *testing.T) {
 			mockSvc: &mockOrderService{
 				getFunc: func(ctx context.Context, id int64) (*model.Order, error) {
 					return nil, domain.ErrOrderNotFound
+				},
+			},
+			mockCache: &mockCache{
+				setFunc: func(ctx context.Context, key string, value string, exp time.Duration) error {
+					if key != "order:id:54321" {
+						return fmt.Errorf("an unexpected cache key has been added: %s", key)
+					}
+					return nil
+				},
+				getFunc: func(ctx context.Context, key string) (string, error) {
+					if key != "order:id:54321" {
+						return "", fmt.Errorf("an unexpected cache key has been requested: %s", key)
+					}
+					return "", errors.New("miss cache")
 				},
 			},
 			wantStatus: http.StatusNotFound,
@@ -272,6 +352,7 @@ func TestGetOrderHandler(t *testing.T) {
 					return nil, errors.New("database timeout")
 				},
 			},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusInternalServerError,
 			wantErr:    ErrorResponse{Err: "internal error"},
 		},
@@ -282,8 +363,13 @@ func TestGetOrderHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
+			deps := &Dependencies{
+				Svc:   tt.mockSvc,
+				Cache: tt.mockCache,
+			}
+
 			mux := http.NewServeMux()
-			mux.HandleFunc("GET /order/{id}", GetOrderHandler(tt.mockSvc))
+			mux.HandleFunc("GET /order/{id}", GetOrderHandler(deps))
 
 			route := fmt.Sprintf("/order/%s", tt.reqID)
 
@@ -340,6 +426,7 @@ func TestListOrdersHandler(t *testing.T) {
 		page          string
 		limit         string
 		mockSvc       *mockOrderService
+		mockCache     *mockCache
 		wantStatus    int
 		wantOrderList *model.OrderListResponse
 		wantErr       ErrorResponse
@@ -351,6 +438,20 @@ func TestListOrdersHandler(t *testing.T) {
 			mockSvc: &mockOrderService{
 				listFunc: func(ctx context.Context, page, limit int) ([]*model.Order, int, error) {
 					return validOrderList, 2, nil
+				},
+			},
+			mockCache: &mockCache{
+				setFunc: func(ctx context.Context, key string, value string, exp time.Duration) error {
+					if key != "orders:page:1:limit:10" {
+						return fmt.Errorf("an unexpected cache key has been added: %s", key)
+					}
+					return nil
+				},
+				getFunc: func(ctx context.Context, key string) (string, error) {
+					if key != "orders:page:1:limit:10" {
+						return "", fmt.Errorf("an unexpected cache key has been requested: %s", key)
+					}
+					return "", errors.New("miss cache")
 				},
 			},
 			wantStatus: http.StatusOK,
@@ -368,12 +469,13 @@ func TestListOrdersHandler(t *testing.T) {
 					return validOrderList, 2, nil
 				},
 			},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusOK,
 			wantOrderList: &model.OrderListResponse{
 				Items: validOrderList,
 				Total: 2,
 				Page:  1,
-				Limit: 20,
+				Limit: 10,
 			},
 		},
 		{
@@ -381,6 +483,7 @@ func TestListOrdersHandler(t *testing.T) {
 			page:       "odin",
 			limit:      "10",
 			mockSvc:    &mockOrderService{},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusBadRequest,
 			wantErr:    ErrorResponse{Err: "invalid page value"},
 		},
@@ -389,6 +492,7 @@ func TestListOrdersHandler(t *testing.T) {
 			page:       "1",
 			limit:      "desyat",
 			mockSvc:    &mockOrderService{},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusBadRequest,
 			wantErr:    ErrorResponse{Err: "invalid limit value"},
 		},
@@ -401,6 +505,7 @@ func TestListOrdersHandler(t *testing.T) {
 					return nil, 0, domain.ErrInvalidPage
 				},
 			},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusNotFound,
 			wantErr:    ErrorResponse{Err: ("page must be >= 1")},
 		},
@@ -413,6 +518,7 @@ func TestListOrdersHandler(t *testing.T) {
 					return nil, 0, domain.ErrInvalidLimit
 				},
 			},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusNotFound,
 			wantErr:    ErrorResponse{Err: "limit must be between 1 and 100"},
 		},
@@ -425,6 +531,7 @@ func TestListOrdersHandler(t *testing.T) {
 					return nil, 0, domain.ErrOrdersNotFound
 				},
 			},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusNotFound,
 			wantErr:    ErrorResponse{Err: "orders not found"},
 		},
@@ -437,6 +544,7 @@ func TestListOrdersHandler(t *testing.T) {
 					return nil, 0, errors.New("database timeout")
 				},
 			},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusInternalServerError,
 			wantErr:    ErrorResponse{Err: "internal error"},
 		},
@@ -447,8 +555,13 @@ func TestListOrdersHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
+			deps := &Dependencies{
+				Svc:   tt.mockSvc,
+				Cache: tt.mockCache,
+			}
+
 			mux := http.NewServeMux()
-			mux.HandleFunc("GET /orders", ListOrdersHandler(tt.mockSvc))
+			mux.HandleFunc("GET /orders", ListOrdersHandler(deps))
 
 			route := fmt.Sprintf("/orders?page=%s&limit=%s", tt.page, tt.limit)
 
@@ -490,6 +603,7 @@ func TestUpdateOrderTransitionHandler(t *testing.T) {
 		orderId    string
 		reqBody    string
 		mockSvc    *mockOrderService
+		mockCache  *mockCache
 		wantStatus int
 		wantErr    ErrorResponse
 	}{
@@ -502,6 +616,14 @@ func TestUpdateOrderTransitionHandler(t *testing.T) {
 					return nil
 				},
 			},
+			mockCache: &mockCache{
+				deleteFunc: func(ctx context.Context, key string) error {
+					if key != "order:id:1" {
+						return fmt.Errorf("unexpected cache key deleted: %s", key)
+					}
+					return nil
+				},
+			},
 			wantStatus: http.StatusNoContent,
 		},
 		{
@@ -509,6 +631,7 @@ func TestUpdateOrderTransitionHandler(t *testing.T) {
 			orderId:    "odin",
 			reqBody:    `{"status":"processing"}`,
 			mockSvc:    &mockOrderService{},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusBadRequest,
 			wantErr:    ErrorResponse{Err: "invalid order id"},
 		},
@@ -517,6 +640,7 @@ func TestUpdateOrderTransitionHandler(t *testing.T) {
 			orderId:    "1",
 			reqBody:    `{"name":"processing"}`,
 			mockSvc:    &mockOrderService{},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusBadRequest,
 			wantErr:    ErrorResponse{Err: "invalid JSON body or unknown fields"},
 		},
@@ -529,6 +653,7 @@ func TestUpdateOrderTransitionHandler(t *testing.T) {
 					return domain.ErrNotValidTransition
 				},
 			},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusBadRequest,
 			wantErr:    ErrorResponse{Err: "not valid transition"},
 		},
@@ -541,6 +666,7 @@ func TestUpdateOrderTransitionHandler(t *testing.T) {
 					return domain.ErrOrderNotFound
 				},
 			},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusNotFound,
 			wantErr:    ErrorResponse{Err: "order not found"},
 		},
@@ -553,6 +679,7 @@ func TestUpdateOrderTransitionHandler(t *testing.T) {
 					return domain.ErrInvalidTransition
 				},
 			},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusBadRequest,
 			wantErr:    ErrorResponse{Err: "invalid transition"},
 		},
@@ -565,6 +692,7 @@ func TestUpdateOrderTransitionHandler(t *testing.T) {
 					return errors.New("database timeout")
 				},
 			},
+			mockCache:  &mockCache{},
 			wantStatus: http.StatusInternalServerError,
 			wantErr:    ErrorResponse{Err: "internal error"},
 		},
@@ -576,8 +704,13 @@ func TestUpdateOrderTransitionHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
+			deps := &Dependencies{
+				Svc:   tt.mockSvc,
+				Cache: tt.mockCache,
+			}
+
 			mux := http.NewServeMux()
-			mux.HandleFunc("POST /order/{id}/transitions", UpdateOrderTransitionHandler(tt.mockSvc))
+			mux.HandleFunc("POST /order/{id}/transitions", UpdateOrderTransitionHandler(deps))
 			route := fmt.Sprintf("/order/%s/transitions", tt.orderId)
 
 			req := httptest.NewRequest(http.MethodPost, route, strings.NewReader(tt.reqBody))

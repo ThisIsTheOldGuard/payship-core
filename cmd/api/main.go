@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/ThisIsTheOldGuard/payship-core/internal/api"
+	"github.com/ThisIsTheOldGuard/payship-core/internal/cache"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/repository"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/service"
 	"github.com/joho/godotenv"
@@ -47,6 +48,7 @@ func main() {
 	// env
 	_ = godotenv.Load()
 
+	// БД
 	dbCfg := LoadDBConfig()
 	pool, err := NewDBPool(ctx, dbCfg)
 	if err != nil {
@@ -56,13 +58,29 @@ func main() {
 
 	defer pool.Close()
 
-	// Проверка подключения
 	if err := pool.Ping(ctx); err != nil {
 		slog.Error("DB ping failed", "error", err)
 		os.Exit(1)
 	}
 	slog.Info("Connected to PostgreSQL", "pool_size", pool.Stat().TotalConns())
 
+	// Redis
+	redisCfg := LoadRedisConfig()
+	redisClient := cache.NewRedisCache(redisCfg.addr, redisCfg.PoolSize)
+
+	var activeCache cache.Cache
+
+	if err := redisClient.Ping(ctx); err != nil {
+		slog.Error("Redis is not available, caching will be disabled", "error", err)
+		activeCache = &cache.NoopCache{}
+	} else {
+		activeCache = redisClient
+		slog.Info("Redis is available")
+	}
+
+	metricsCache := cache.NewMetricsCache(activeCache)
+
+	// Prometheus
 	repo := repository.NewOrderRepo(pool, PrometheusDBMetric{})
 	srvCfg := LoadSrvConfig()
 	orderSvc := service.NewOrderService(repo)
@@ -73,16 +91,21 @@ func main() {
 	RegisterDBMetrics()
 	prometheus.MustRegister(newDBPoolCollector(pool))
 
+	deps := &api.Dependencies{
+		Svc:   orderSvc,
+		Cache: metricsCache,
+	}
+
 	mux.HandleFunc("GET /{$}", api.RootHandler())
 	mux.HandleFunc("GET /", api.NotFoundHandler())
 	mux.HandleFunc("GET /health", api.HealthHandler())
 	mux.HandleFunc("GET /ready", api.ReadyHandler(pool))
 
 	mux.HandleFunc("GET /metrics", promhttp.Handler().ServeHTTP)
-	mux.HandleFunc("POST /order", api.CreateOrderHandler(orderSvc))
-	mux.HandleFunc("GET /orders", api.ListOrdersHandler(orderSvc))
-	mux.HandleFunc("GET /order/{id}", api.GetOrderHandler(orderSvc))
-	mux.HandleFunc("POST /order/{id}/transitions", api.UpdateOrderTransitionHandler(orderSvc))
+	mux.HandleFunc("POST /order", api.CreateOrderHandler(deps))
+	mux.HandleFunc("GET /orders", api.ListOrdersHandler(deps))
+	mux.HandleFunc("GET /order/{id}", api.GetOrderHandler(deps))
+	mux.HandleFunc("POST /order/{id}/transitions", api.UpdateOrderTransitionHandler(deps))
 
 	InitTestHandlers(mux, pool)
 

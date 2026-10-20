@@ -66,6 +66,21 @@ services:
     networks:
       - payship-net
 
+  redis:
+    image: redis:7-alpine
+    container_name: payship-redis
+    ports:
+      - "6379:6379"
+    # Для dev отключаем сохранение на диск (кэш эфемерный, не забивает диск)
+    command: redis-server --appendonly no --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - payship-net
+
 volumes:
   pgdata:
   prometheus_data:

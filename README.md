@@ -58,7 +58,7 @@ docker exec -it prometheus wget -qO- http://host.docker.internal:8080/metrics | 
 ├── grafana/                        # Конфигурация grafana
 ├── docker-compose.yml
 ├── prometheus.yml
-├── loadtest.js                     # K6 дымовое нагрузочное тестирование
+├── tests                           # K6 дымовое нагрузочное тестирование
 └── README.md
 ```
 
@@ -107,7 +107,9 @@ for i in {1..10}; do curl -s http://localhost:8080/debug/db/slow > /dev/null & d
 
 <a id="tests"></a>
 ##  Тесты
-Временно тесты реализованы только для ./internal/service
+Реализовано для:
+- ./internal/service
+- ./internal/api
 ```
 # Запустить тесты пакета service с флагом покрытия
 go test ./internal/service -cover
@@ -129,7 +131,7 @@ xdg-open coverage.html
 
 <a id="road-map"></a>
 ## Road-Map
-Стресс тестирование > Асинхронность & Брокер (Kafka) > CI/CD & Deploy
+Брокер (Kafka)
 
 <a id="plans"></a>
 ## Будущие планы

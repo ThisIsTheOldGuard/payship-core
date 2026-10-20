@@ -30,7 +30,7 @@ type DBConfig struct {
 // SrvConfig содержит параметры запуска HTTP-сервера.
 //
 // Поля:
-//   - addr: адрес и порт для прослушивания (например, "0.0.0.0:8080").
+//   - addr: адрес и порт (например, "0.0.0.0:8080").
 type SrvConfig struct {
 	addr string
 }
@@ -41,6 +41,18 @@ type SrvConfig struct {
 //   - IsTest: определяет вариант работы приложения (например, "true").
 type TestConfig struct {
 	IsTest bool
+}
+
+// DBConfig содержит параметры подключения к базе данных.
+//
+// Поля:
+//   - addr: адрес и порт.
+//   - PoolSize: максимальное количество соединений в пуле.
+//
+// Значения по умолчанию задаются через os.Getenv с фоллбэком.
+type RedisConfig struct {
+	addr     string
+	PoolSize int
 }
 
 // LoadDBConfig загружает конфигурацию БД из переменных окружения.
@@ -60,6 +72,21 @@ func LoadDBConfig() *DBConfig {
 		MinConns:        parseIntEnv("MIN_CONNS", 5),
 		MaxConnIdleTime: parseTimeEnv("DB_MAX_CONN_IDLE_MINUTES", 5*time.Minute),
 		MaxConnLifetime: parseTimeEnv("DB_MAX_CONN_LIFE_HOURS", 1*time.Hour),
+	}
+}
+
+// LoadRedisConfig загружает конфигурацию БД из переменных окружения.
+//
+// Функция читает REDIS_ADDR, REDIS_POOL_SIZE через os.Getenv.
+// При отсутствии или ошибке парсинга используются значения по умолчанию:
+//   - REDIS_ADDR: "0.0.0.0:6379"
+//   - REDIS_POOL_SIZE: 10
+//
+// Возвращает заполненную *RedisConfig для передачи в cache.NewRedisCache.
+func LoadRedisConfig() *RedisConfig {
+	return &RedisConfig{
+		addr:     getStrEnv("REDIS_ADDR", "0.0.0.0:6379"),
+		PoolSize: int(parseIntEnv("REDIS_POOL_SIZE", 10)),
 	}
 }
 

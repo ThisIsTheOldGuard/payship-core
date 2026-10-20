@@ -108,8 +108,8 @@ func CreateOrderHandler(deps *Dependencies) http.HandlerFunc {
 		// Cache
 		cacheKey := fmt.Sprintf("order:id:%d", order.ID)
 		_ = deps.Cache.Delete(r.Context(), cacheKey)
-		_ = deps.Cache.Delete(r.Context(), fmt.Sprintf("orders:page:1:limit:10"))
-		_ = deps.Cache.Delete(r.Context(), fmt.Sprintf("orders:page:1:limit:20"))
+		_ = deps.Cache.Delete(r.Context(), "orders:page:1:limit:10")
+		_ = deps.Cache.Delete(r.Context(), "orders:page:1:limit:20")
 
 		// Ответ
 		w.Header().Set("Content-Type", "application/json")
@@ -154,7 +154,7 @@ func GetOrderHandler(deps *Dependencies) http.HandlerFunc {
 			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("Cache-Control", "max-age=30, public")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(cachedData))
+			_, _ = w.Write([]byte(cachedData))
 
 			return
 		}
@@ -224,7 +224,7 @@ func ListOrdersHandler(deps *Dependencies) http.HandlerFunc {
 			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("Cache-Control", "max-age=30, public")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(cachedData))
+			_, _ = w.Write([]byte(cachedData))
 
 			return
 		}
@@ -322,7 +322,7 @@ func UpdateOrderTransitionHandler(deps *Dependencies) http.HandlerFunc {
 
 		cacheKey := fmt.Sprintf("order:id:%d", id)
 		_ = deps.Cache.Delete(r.Context(), cacheKey)
-		_ = deps.Cache.Delete(r.Context(), fmt.Sprintf("orders:page:1:limit:10"))
+		_ = deps.Cache.Delete(r.Context(), "orders:page:1:limit:10")
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNoContent)

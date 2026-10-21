@@ -90,8 +90,6 @@ func main() {
 
 	metricsCache := cache.NewMetricsCache(cacheMgr)
 
-	//redisClient := cache.NewRedisCache(redisCfg.addr, redisCfg.PoolSize)
-
 	// Server
 
 	// Зависимости
@@ -102,20 +100,6 @@ func main() {
 		Svc:   orderSvc,
 		Cache: metricsCache,
 	}
-
-	//var activeCache cache.Cache
-
-	//if err := redisClient.Ping(ctx); err != nil {
-	//	slog.Error("Redis is not available, caching will be disabled", "error", err)
-	//	activeCache = &cache.NoopCache{}
-	//	limiter.SetLimit(rate.Limit(srvCfg.RateLimitFallbackRPS))
-	//	limiter.SetBurst(srvCfg.RateLimitFallbackBurst)
-	//} else {
-	//	activeCache = redisClient
-	//	slog.Info("Redis is available")
-	//}
-
-	//metricsCache := cache.NewMetricsCache(activeCache)
 
 	mux := http.NewServeMux()
 

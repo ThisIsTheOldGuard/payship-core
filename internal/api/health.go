@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"time"
@@ -11,33 +10,6 @@ import (
 // Pinger -  интерфейс для проверки доступности БД.
 type Pinger interface {
 	Ping(context.Context) error
-}
-
-// Вовзможно в будущем надо сделать ответ в виде перечисления одного из внутренних статусов
-type HealthResponse struct {
-	Status string `json:"status"`
-}
-
-// sendJSONError отправляет стандартизированный JSON-ответ о статусе сервиса.
-//
-// Вспомогательная функция устанавливает:
-//   - Content-Type: application/json
-//   - Указанный HTTP-статус код
-//   - Тело {"status": "<сообщение>"}
-//
-// Параметры:
-//   - w: http.ResponseWriter для отправки ответа.
-//   - status: HTTP-статус код (например, 200).
-//   - message: человекочитаемое сообщение о статусе.
-//
-// Пример:
-//
-//	sendJSONHealth(w, http.StatusOK, "Ready")
-//	// Ответ: {"status":"Ready"}
-func sendJSONHealth(w http.ResponseWriter, status int, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(HealthResponse{Status: message})
 }
 
 // RootHandler обрабатывает запросы на корневой путь "/".
@@ -65,7 +37,7 @@ func RootHandler() http.HandlerFunc {
 //	//Ответ: {"error":"Page not found"}
 func NotFoundHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		sendJSONError(w, http.StatusNotFound, "Page not found")
+		SendJSONError(w, http.StatusNotFound, "Page not found")
 	}
 }
 
@@ -101,7 +73,7 @@ func ReadyHandler(p Pinger) http.HandlerFunc {
 
 		if err := p.Ping(ctx); err != nil {
 			slog.Error("Readiness check failed", "error", err)
-			sendJSONError(w, http.StatusServiceUnavailable, "Database is unavailable")
+			SendJSONError(w, http.StatusServiceUnavailable, "Database is unavailable")
 			return
 		}
 

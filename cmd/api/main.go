@@ -29,6 +29,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"golang.org/x/time/rate"
 )
 
 // main инициализирует и запускает HTTP-сервер обработки заказов.
@@ -45,11 +46,14 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	dbCfg := LoadDBConfig()
+	redisCfg := LoadRedisConfig()
+	srvCfg := LoadSrvConfig()
+
 	// env
 	_ = godotenv.Load()
 
 	// БД
-	dbCfg := LoadDBConfig()
 	pool, err := NewDBPool(ctx, dbCfg)
 	if err != nil {
 		slog.Error("Failed to init DB", "error", err)
@@ -65,36 +69,60 @@ func main() {
 	slog.Info("Connected to PostgreSQL", "pool_size", pool.Stat().TotalConns())
 
 	// Redis
-	redisCfg := LoadRedisConfig()
-	redisClient := cache.NewRedisCache(redisCfg.addr, redisCfg.PoolSize)
-
-	var activeCache cache.Cache
-
-	if err := redisClient.Ping(ctx); err != nil {
-		slog.Error("Redis is not available, caching will be disabled", "error", err)
-		activeCache = &cache.NoopCache{}
-	} else {
-		activeCache = redisClient
-		slog.Info("Redis is available")
+	limiter := rate.NewLimiter(rate.Limit(srvCfg.RateLimitRPS), srvCfg.RateLimitBurst)
+	cacheStateHook := func(isFallback bool) {
+		if isFallback {
+			slog.Warn("Redis cache is inactive. The request limit has been reduced.")
+			limiter.SetLimit(rate.Limit(srvCfg.RateLimitFallbackRPS))
+			limiter.SetBurst(srvCfg.RateLimitFallbackBurst)
+		} else {
+			slog.Info("Redis cache is active! Request limit restored.")
+			limiter.SetLimit(rate.Limit(srvCfg.RateLimitRPS))
+			limiter.SetBurst(srvCfg.RateLimitBurst)
+		}
 	}
 
-	metricsCache := cache.NewMetricsCache(activeCache)
+	redisClient := cache.NewRedisCache(redisCfg.addr, redisCfg.PoolSize)
+	noop := &cache.NoopCache{}
 
-	// Prometheus
+	cacheMgr := cache.NewCacheManager(redisClient, noop, cacheStateHook)
+	go cacheMgr.StartHealthCheck(ctx, redisClient)
+
+	metricsCache := cache.NewMetricsCache(cacheMgr)
+
+	//redisClient := cache.NewRedisCache(redisCfg.addr, redisCfg.PoolSize)
+
+	// Server
+
+	// Зависимости
 	repo := repository.NewOrderRepo(pool, PrometheusDBMetric{})
-	srvCfg := LoadSrvConfig()
 	orderSvc := service.NewOrderService(repo)
-
-	mux := http.NewServeMux()
-
-	RegisterMetrics()
-	RegisterDBMetrics()
-	prometheus.MustRegister(newDBPoolCollector(pool))
 
 	deps := &api.Dependencies{
 		Svc:   orderSvc,
 		Cache: metricsCache,
 	}
+
+	//var activeCache cache.Cache
+
+	//if err := redisClient.Ping(ctx); err != nil {
+	//	slog.Error("Redis is not available, caching will be disabled", "error", err)
+	//	activeCache = &cache.NoopCache{}
+	//	limiter.SetLimit(rate.Limit(srvCfg.RateLimitFallbackRPS))
+	//	limiter.SetBurst(srvCfg.RateLimitFallbackBurst)
+	//} else {
+	//	activeCache = redisClient
+	//	slog.Info("Redis is available")
+	//}
+
+	//metricsCache := cache.NewMetricsCache(activeCache)
+
+	mux := http.NewServeMux()
+
+	// Prometheus
+	RegisterMetrics()
+	RegisterDBMetrics()
+	prometheus.MustRegister(newDBPoolCollector(pool))
 
 	mux.HandleFunc("GET /{$}", api.RootHandler())
 	mux.HandleFunc("GET /", api.NotFoundHandler())
@@ -109,9 +137,14 @@ func main() {
 
 	InitTestHandlers(mux, pool)
 
+	handlerWithLimit := RateLimitMiddleware(mux, limiter)
+	handlerWithMetriccs := MetricsMiddleware(handlerWithLimit)
 	srv := &http.Server{
-		Addr:    srvCfg.addr,
-		Handler: MetricsMiddleware(mux),
+		Addr:         srvCfg.addr,
+		Handler:      handlerWithMetriccs,
+		ReadTimeout:  srvCfg.ReadTimeout,
+		WriteTimeout: srvCfg.WriteTimeout,
+		IdleTimeout:  srvCfg.IdleTimeout,
 	}
 
 	// Запуск сервера

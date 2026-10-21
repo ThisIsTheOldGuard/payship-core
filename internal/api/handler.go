@@ -28,33 +28,6 @@ import (
 
 // Для валидации также можно использовать https://github.com/go-playground/validator
 
-// ErrorResponse - структура представления ошибки.
-type ErrorResponse struct {
-	Err string `json:"error"`
-}
-
-// sendJSONError отправляет стандартизированный JSON-ответ об ошибке.
-//
-// Вспомогательная функция устанавливает:
-//   - Content-Type: application/json
-//   - Указанный HTTP-статус код
-//   - Тело {"error": "<сообщение>"}
-//
-// Параметры:
-//   - w: http.ResponseWriter для отправки ответа.
-//   - status: HTTP-статус код (например, 400, 404, 500).
-//   - message: человекочитаемое сообщение об ошибке.
-//
-// Пример:
-//
-//	sendJSONError(w, http.StatusBadRequest, "invalid amount")
-//	// Ответ: 400 {"error":"invalid amount"}
-func sendJSONError(w http.ResponseWriter, status int, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(ErrorResponse{Err: message})
-}
-
 // CreateOrderHandler создаёт хендлер для эндпоинта POST /order.
 //
 // Функция-фабрика принимает service.OrderService через замыкание
@@ -89,7 +62,7 @@ func CreateOrderHandler(deps *Dependencies) http.HandlerFunc {
 		decoder.DisallowUnknownFields()
 
 		if err := decoder.Decode(&req); err != nil {
-			sendJSONError(w, http.StatusBadRequest, "invalid JSON body or unknown fields")
+			SendJSONError(w, http.StatusBadRequest, "invalid JSON body or unknown fields")
 			return
 		}
 
@@ -97,10 +70,10 @@ func CreateOrderHandler(deps *Dependencies) http.HandlerFunc {
 		if err != nil {
 			switch {
 			case errors.Is(err, domain.ErrEmptyCustomer), errors.Is(err, domain.ErrInvalidAmount):
-				sendJSONError(w, http.StatusBadRequest, err.Error())
+				SendJSONError(w, http.StatusBadRequest, err.Error())
 			default:
 				slog.Error("Failed to create order", "error", err)
-				sendJSONError(w, http.StatusInternalServerError, "internal error")
+				SendJSONError(w, http.StatusInternalServerError, "internal error")
 			}
 			return
 		}
@@ -145,7 +118,7 @@ func GetOrderHandler(deps *Dependencies) http.HandlerFunc {
 
 		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
-			sendJSONError(w, http.StatusBadRequest, "invalid order id")
+			SendJSONError(w, http.StatusBadRequest, "invalid order id")
 			return
 		}
 
@@ -162,11 +135,11 @@ func GetOrderHandler(deps *Dependencies) http.HandlerFunc {
 		order, err := deps.Svc.GetOrder(r.Context(), id)
 		if err != nil {
 			if errors.Is(err, domain.ErrOrderNotFound) {
-				sendJSONError(w, http.StatusNotFound, err.Error())
+				SendJSONError(w, http.StatusNotFound, err.Error())
 				return
 			}
 			slog.Error("Failed to get order", "error", err)
-			sendJSONError(w, http.StatusInternalServerError, "internal error")
+			SendJSONError(w, http.StatusInternalServerError, "internal error")
 			return
 		}
 
@@ -206,14 +179,14 @@ func ListOrdersHandler(deps *Dependencies) http.HandlerFunc {
 		if p := r.URL.Query().Get("page"); p != "" {
 			val, err := strconv.Atoi(p)
 			if err != nil {
-				sendJSONError(w, http.StatusBadRequest, "invalid page value")
+				SendJSONError(w, http.StatusBadRequest, "invalid page value")
 			}
 			page = val
 		}
 		if l := r.URL.Query().Get("limit"); l != "" {
 			val, err := strconv.Atoi(l)
 			if err != nil {
-				sendJSONError(w, http.StatusBadRequest, "invalid limit value")
+				SendJSONError(w, http.StatusBadRequest, "invalid limit value")
 			}
 			limit = val
 		}
@@ -235,10 +208,10 @@ func ListOrdersHandler(deps *Dependencies) http.HandlerFunc {
 			case errors.Is(err, domain.ErrOrdersNotFound),
 				errors.Is(err, domain.ErrInvalidPage),
 				errors.Is(err, domain.ErrInvalidLimit):
-				sendJSONError(w, http.StatusNotFound, err.Error())
+				SendJSONError(w, http.StatusNotFound, err.Error())
 			default:
 				slog.Error("Failed to list orders", "error", err)
-				sendJSONError(w, http.StatusInternalServerError, "internal error")
+				SendJSONError(w, http.StatusInternalServerError, "internal error")
 			}
 			return
 		}
@@ -289,7 +262,7 @@ func UpdateOrderTransitionHandler(deps *Dependencies) http.HandlerFunc {
 
 		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
-			sendJSONError(w, http.StatusBadRequest, "invalid order id")
+			SendJSONError(w, http.StatusBadRequest, "invalid order id")
 			return
 		}
 
@@ -302,7 +275,7 @@ func UpdateOrderTransitionHandler(deps *Dependencies) http.HandlerFunc {
 		decoder.DisallowUnknownFields()
 
 		if err := decoder.Decode(&transition); err != nil {
-			sendJSONError(w, http.StatusBadRequest, "invalid JSON body or unknown fields")
+			SendJSONError(w, http.StatusBadRequest, "invalid JSON body or unknown fields")
 			return
 		}
 
@@ -310,12 +283,12 @@ func UpdateOrderTransitionHandler(deps *Dependencies) http.HandlerFunc {
 			switch {
 			case errors.Is(err, domain.ErrNotValidTransition),
 				errors.Is(err, domain.ErrInvalidTransition):
-				sendJSONError(w, http.StatusBadRequest, err.Error())
+				SendJSONError(w, http.StatusBadRequest, err.Error())
 			case errors.Is(err, domain.ErrOrderNotFound):
-				sendJSONError(w, http.StatusNotFound, err.Error())
+				SendJSONError(w, http.StatusNotFound, err.Error())
 			default:
 				slog.Error("Failed to update status order", "error", err)
-				sendJSONError(w, http.StatusInternalServerError, "internal error")
+				SendJSONError(w, http.StatusInternalServerError, "internal error")
 			}
 			return
 		}

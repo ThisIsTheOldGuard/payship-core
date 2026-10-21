@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ThisIsTheOldGuard/payship-core/internal/api"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/cache"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -128,14 +129,12 @@ func MetricsMiddleware(next http.Handler) http.Handler {
 
 			// Если PANIC
 			if err := recover(); err != nil {
-				rec.statusCode = http.StatusInternalServerError
-
+				api.SendJSONError(rec, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 				slog.Error("HTTP Request PANIC",
 					"panic_error", err,
 					"method", r.Method,
 					"path", path,
 				)
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			}
 
 			if rec.statusCode == http.StatusNotFound {

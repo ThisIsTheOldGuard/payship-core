@@ -12,13 +12,16 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/ThisIsTheOldGuard/payship-core/internal/domain"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/model"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/service"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -49,14 +52,12 @@ func NewOrderRepo(pool *pgxpool.Pool, metrics DBMetrics) service.OrderRepository
 	return &orderRepo{pool: pool, metrics: metrics}
 }
 
-// Create сохраняет новый заказ в базе данных.
-//
-// Метод выполняет INSERT с RETURNING id для заполнения поля ID
-// входной структуры. Операция выполняется в контексте переданного ctx.
+// CreateWithOutbox сохраняет новый заказ в базе данных и создаёт outbox сообщение.
 //
 // Параметры:
 //   - ctx: контекст для отмены/таймаута запроса.
-//   - order: указатель на модель заказа; поле ID и CreatedAt будет заполнено после успеха.
+//   - order: указатель на модель заказа.
+//   - event: модель сообщения outbox
 //
 // Возвращает:
 //   - error: ошибка выполнения запроса или нарушения ограничений БД.
@@ -68,18 +69,50 @@ func NewOrderRepo(pool *pgxpool.Pool, metrics DBMetrics) service.OrderRepository
 //	    return err
 //	}
 //	fmt.Println("Created order ID:", order.ID)
-func (r *orderRepo) Create(ctx context.Context, order *model.Order) error {
+func (r *orderRepo) CreateWithOutbox(ctx context.Context, order *model.Order) error {
 
 	start := time.Now()
 	defer func() {
 		r.metrics.ObserveQueryDuration("create_order", time.Since(start))
 	}()
 
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("orderRepo.Create begin tx: %w", err)
+	}
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil && err != sql.ErrTxDone {
+			log.Printf("unexpected rollback error: %v", err)
+		}
+	}()
+
 	query := `INSERT INTO orders (customer_name, amount, status) VALUES ($1, $2, $3) RETURNING id, created_at`
-	err := r.pool.QueryRow(ctx, query, order.CustomerName, order.Amount, order.Status).Scan(&order.ID, &order.CreatedAt)
+	err = tx.QueryRow(ctx, query, order.CustomerName, order.Amount, order.Status).Scan(&order.ID, &order.CreatedAt)
 
 	if err != nil {
-		return fmt.Errorf("orderRepo.Create: %w", err)
+		return fmt.Errorf("orderRepo.Create insert order: %w", err)
+	}
+
+	event := model.OrderCreatedEvent{
+		EventID:   uuid.New(),
+		OrderID:   order.ID,
+		Customer:  order.CustomerName,
+		Amount:    order.Amount,
+		Status:    order.Status,
+		CreatedAt: order.CreatedAt,
+	}
+
+	// В будущем надо написать отдельного уборщика, который бы чистил эту таблицу
+	// DELETE FROM outbox_messages
+	// WHERE status = 'SENT'
+	// AND created_at < NOW() - INTERVAL '7 days'; -- Храним историю 7 дней
+	err = CreateOutboxMessage(ctx, tx, event)
+	if err != nil {
+		return fmt.Errorf("orderRepo.Create outbox message: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("orderRepo.Create commit tx: %w", err)
 	}
 
 	return nil

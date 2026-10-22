@@ -15,6 +15,8 @@ import (
 	"github.com/ThisIsTheOldGuard/payship-core/internal/model"
 )
 
+// В современных архитектурах часто используется testify https://pkg.go.dev/github.com/stretchr/testify@v1.12.1/assert
+
 type mockOrderService struct {
 	createFunc           func(ctx context.Context, name string, amount float64) (*model.Order, error)
 	getFunc              func(ctx context.Context, id int64) (*model.Order, error)

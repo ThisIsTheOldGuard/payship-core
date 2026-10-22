@@ -34,14 +34,12 @@ import (
 //	func (r *orderRepo) GetByID(ctx context.Context, id int64) (*model.Order, error) { ... }
 type OrderRepository interface {
 
-	// Create сохраняет новый заказ в базе данных.
-	//
-	// Метод выполняет INSERT с RETURNING id для заполнения поля ID
-	// входной структуры. Операция выполняется в контексте переданного ctx.
+	// CreateWithOutbox сохраняет новый заказ в БД и создаёт outbox сообщение.
 	//
 	// Параметры:
 	//   - ctx: контекст для отмены/таймаута запроса.
-	//   - order: указатель на модель заказа; поле ID и CreatedAt будет заполнено после успеха.
+	//   - order: указатель на модель заказа.
+	//   - event: модель сообщения outbox
 	//
 	// Возвращает:
 	//   - error: ошибка выполнения запроса или нарушения ограничений БД.
@@ -53,7 +51,7 @@ type OrderRepository interface {
 	//	    return err
 	//	}
 	//	fmt.Println("Created order ID:", order.ID)
-	Create(ctx context.Context, order *model.Order) error
+	CreateWithOutbox(ctx context.Context, order *model.Order) error
 
 	// GetByID возвращает заказ по его уникальному идентификатору.
 	//
@@ -234,7 +232,7 @@ func (s *orderService) CreateOrder(ctx context.Context, customerName string, amo
 		Status:       model.StatusPending,
 	}
 
-	if err := s.repo.Create(ctx, order); err != nil {
+	if err := s.repo.CreateWithOutbox(ctx, order); err != nil {
 		return nil, fmt.Errorf("service.CreateOrder: %w", err)
 	}
 

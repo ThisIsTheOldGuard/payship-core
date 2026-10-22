@@ -27,7 +27,7 @@ type mockOrderRepository struct {
 
 // Метод Create имитирует метод Create репозитория.
 // Устанавливает флаг createCalled в значение true и возвращает предварительно настроенные значения.
-func (m *mockOrderRepository) Create(ctx context.Context, order *model.Order) error {
+func (m *mockOrderRepository) CreateWithOutbox(ctx context.Context, order *model.Order) error {
 	m.createCalled = true
 	return m.createRes
 }

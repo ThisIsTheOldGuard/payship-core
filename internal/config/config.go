@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"log/slog"
@@ -23,12 +23,25 @@ type DBConfig struct {
 	MaxConnLifetime time.Duration
 }
 
+type KafkaConfig struct {
+	Addr      string
+	BatchSize int
+}
+
+type Worker struct {
+	Addr string
+}
+type WorkerConfig struct {
+	Kafka  KafkaConfig
+	Worker Worker
+}
+
 // SrvConfig содержит параметры запуска HTTP-сервера.
 //
 // Поля:
 //   - addr: адрес и порт (например, "0.0.0.0:8080").
 type SrvConfig struct {
-	addr         string
+	Addr         string
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
 	IdleTimeout  time.Duration
@@ -55,7 +68,7 @@ type TestConfig struct {
 //
 // Значения по умолчанию задаются через os.Getenv с фоллбэком.
 type RedisConfig struct {
-	addr     string
+	Addr     string
 	PoolSize int
 }
 
@@ -91,7 +104,7 @@ func LoadDBConfig() *DBConfig {
 // Возвращает заполненную *RedisConfig для передачи в cache.NewRedisCache.
 func LoadRedisConfig() *RedisConfig {
 	return &RedisConfig{
-		addr:     getStrEnv("REDIS_ADDR", "0.0.0.0:6379"),
+		Addr:     getStrEnv("REDIS_ADDR", "0.0.0.0:6379"),
 		PoolSize: getIntEnv("REDIS_POOL_SIZE", 10),
 	}
 }
@@ -112,7 +125,7 @@ func LoadRedisConfig() *RedisConfig {
 // Возвращает заполненную *SrvConfig для инициализации http.Server и middleware.
 func LoadSrvConfig() *SrvConfig {
 	return &SrvConfig{
-		addr:                   getStrEnv("SERVER_ADDR", "0.0.0.0:8080"),
+		Addr:                   getStrEnv("SERVER_ADDR", "0.0.0.0:8080"),
 		ReadTimeout:            parseDurationEnv("SERVER_READ_TIMEOUT", 5*time.Second),
 		WriteTimeout:           parseDurationEnv("HTTP_WRITE_TIMEOUT", 10*time.Second),
 		IdleTimeout:            parseDurationEnv("HTTP_IDLE_TIMEOUT", 120*time.Second),
@@ -128,6 +141,22 @@ func LoadSrvConfig() *SrvConfig {
 // Возвращает *TestConfig с параметрами тестовых данных
 func LoadTestConfig() *TestConfig {
 	return &TestConfig{parseBoolEnv("IsTest", true)}
+}
+
+func LoadWorkerConfig() *WorkerConfig {
+	return &WorkerConfig{
+		Kafka: KafkaConfig{
+			Addr:      getStrEnv("KAFKA_ADDR", "localhost:9092"),
+			BatchSize: getIntEnv("KAFKA_BATCH_SIZE", 100),
+		},
+		Worker: Worker{
+			Addr: getStrEnv("WORKER_ADDR", "0.0.0.0:9092"),
+		},
+	}
+	//return &KafkaConfig{
+	//	Addr:      getStrEnv("KAFKA_ADDR", "localhost:9092"),
+	//	BatchSize: getIntEnv("KAFKA_BATCH_SIZE", 100),
+	//}
 }
 
 // getStrEnv получает строковое значение из окружения.

@@ -1,9 +1,10 @@
-package main
+package database
 
 import (
 	"context"
 	"fmt"
 
+	"github.com/ThisIsTheOldGuard/payship-core/internal/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -28,7 +29,7 @@ import (
 //	    log.Fatal(err)
 //	}
 //	defer pool.Close()
-func NewDBPool(ctx context.Context, cfg *DBConfig) (*pgxpool.Pool, error) {
+func NewDBPool(ctx context.Context, cfg *config.DBConfig) (*pgxpool.Pool, error) {
 	// Конфиг БД
 	poolCfg, err := pgxpool.ParseConfig(cfg.URL)
 	if err != nil {

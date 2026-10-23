@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/ThisIsTheOldGuard/payship-core/internal/api"
+	"github.com/ThisIsTheOldGuard/payship-core/internal/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/time/rate"
 )
@@ -21,7 +22,7 @@ func RateLimitMiddleware(next http.Handler, limiter *rate.Limiter) http.Handler 
 
 // RateLimitMiddleware активирует тестовый хэндлер для тестирования задержек БД.
 func InitTestHandlers(mux *http.ServeMux, repo *pgxpool.Pool) {
-	TestCfg := LoadTestConfig()
+	TestCfg := config.LoadTestConfig()
 	if TestCfg.IsTest {
 		mux.HandleFunc("GET /debug/db/slow", api.Debug_DB_Slow(repo))
 	}

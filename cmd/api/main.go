@@ -24,6 +24,9 @@ import (
 
 	"github.com/ThisIsTheOldGuard/payship-core/internal/api"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/cache"
+	"github.com/ThisIsTheOldGuard/payship-core/internal/config"
+	"github.com/ThisIsTheOldGuard/payship-core/internal/database"
+	"github.com/ThisIsTheOldGuard/payship-core/internal/metrics"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/repository"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/service"
 	"github.com/joho/godotenv"
@@ -46,15 +49,20 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	dbCfg := LoadDBConfig()
-	redisCfg := LoadRedisConfig()
-	srvCfg := LoadSrvConfig()
-
 	// env
 	_ = godotenv.Load()
 
+	dbCfg := config.LoadDBConfig()
+	redisCfg := config.LoadRedisConfig()
+	srvCfg := config.LoadSrvConfig()
+
+	slog.Info("⚙️ CONFIG CHECK",
+		"rps", srvCfg.RateLimitRPS,
+		"burst", srvCfg.RateLimitBurst,
+		"db_max", dbCfg.MaxConns)
+
 	// БД
-	pool, err := NewDBPool(ctx, dbCfg)
+	pool, err := database.NewDBPool(ctx, dbCfg)
 	if err != nil {
 		slog.Error("Failed to init DB", "error", err)
 		os.Exit(1)
@@ -82,7 +90,7 @@ func main() {
 		}
 	}
 
-	redisClient := cache.NewRedisCache(redisCfg.addr, redisCfg.PoolSize)
+	redisClient := cache.NewRedisCache(redisCfg.Addr, redisCfg.PoolSize)
 	noop := &cache.NoopCache{}
 
 	cacheMgr := cache.NewCacheManager(redisClient, noop, cacheStateHook)
@@ -93,7 +101,7 @@ func main() {
 	// Server
 
 	// Зависимости
-	repo := repository.NewOrderRepo(pool, PrometheusDBMetric{})
+	repo := repository.NewOrderRepo(pool, metrics.PrometheusDBMetric{})
 	orderSvc := service.NewOrderService(repo)
 
 	deps := &api.Dependencies{
@@ -104,9 +112,9 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Prometheus
-	RegisterMetrics()
-	RegisterDBMetrics()
-	prometheus.MustRegister(newDBPoolCollector(pool))
+	metrics.RegisterMetrics()
+	metrics.RegisterDBMetrics()
+	prometheus.MustRegister(metrics.NewDBPoolCollector(pool))
 
 	mux.HandleFunc("GET /{$}", api.RootHandler())
 	mux.HandleFunc("GET /", api.NotFoundHandler())
@@ -122,9 +130,9 @@ func main() {
 	InitTestHandlers(mux, pool)
 
 	handlerWithLimit := RateLimitMiddleware(mux, limiter)
-	handlerWithMetriccs := MetricsMiddleware(handlerWithLimit)
+	handlerWithMetriccs := metrics.MetricsMiddleware(handlerWithLimit)
 	srv := &http.Server{
-		Addr:         srvCfg.addr,
+		Addr:         srvCfg.Addr,
 		Handler:      handlerWithMetriccs,
 		ReadTimeout:  srvCfg.ReadTimeout,
 		WriteTimeout: srvCfg.WriteTimeout,

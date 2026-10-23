@@ -5,7 +5,7 @@ import { randomIntBetween } from 'https://jslib.k6.io/k6-utils/1.2.0/index.js';
 export const options = {
     stages: [
         { duration: '10s', target: 10 },
-        { duration: '30s', target: 50 },
+        { duration: '30s', target: 100 },
         { duration: '10s', target: 0 },
     ],
     thresholds: {
@@ -44,7 +44,7 @@ export function setup() {
         }
     }
 
-    // кжш списка
+    // кэш списка
     http.get(`${BASE_URL}/orders?page=1&limit=10`);
 
     console.log(`Создано заказов: ${orderIds.length}`);
@@ -84,5 +84,5 @@ export default function (data) {
         check(createRes, { 'create order 201': (r) => r.status === 201 });
     }
 
-    sleep(0.1);
+    sleep(0.2);
 }

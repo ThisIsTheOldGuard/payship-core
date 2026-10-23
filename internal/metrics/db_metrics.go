@@ -1,4 +1,4 @@
-package main
+package metrics
 
 import (
 	"time"
@@ -75,7 +75,7 @@ func RegisterDBMetrics() {
 //
 // Возвращает:
 //   - *dbPoolCollector: готовый к использованию и регистрации коллектор.
-func newDBPoolCollector(pool *pgxpool.Pool) *dbPoolCollector {
+func NewDBPoolCollector(pool *pgxpool.Pool) *dbPoolCollector {
 	return &dbPoolCollector{
 		pool: pool,
 		activeConnsDesc: prometheus.NewDesc(

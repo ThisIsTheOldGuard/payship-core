@@ -12,10 +12,9 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/ThisIsTheOldGuard/payship-core/internal/domain"
@@ -80,9 +79,15 @@ func (r *orderRepo) CreateWithOutbox(ctx context.Context, order *model.Order) er
 	if err != nil {
 		return fmt.Errorf("orderRepo.Create begin tx: %w", err)
 	}
+	// https://github.com/jackc/pgx/issues/609 v4 tx.Rollback with canceled ctx / Connection Leak via Canceled Context
 	defer func() {
-		if err := tx.Rollback(ctx); err != nil && err != sql.ErrTxDone {
-			log.Printf("unexpected rollback error: %v", err)
+		if err != nil {
+			rollbackCtx, rollbackCancel := context.WithTimeout(context.Background(), 1*time.Second)
+			defer rollbackCancel()
+
+			if rollbackErr := tx.Rollback(rollbackCtx); rollbackErr != nil {
+				slog.Error("orderRepo.Create rollback failed", "error", rollbackErr)
+			}
 		}
 	}()
 
@@ -102,10 +107,6 @@ func (r *orderRepo) CreateWithOutbox(ctx context.Context, order *model.Order) er
 		CreatedAt: order.CreatedAt,
 	}
 
-	// В будущем надо написать отдельного уборщика, который бы чистил эту таблицу
-	// DELETE FROM outbox_messages
-	// WHERE status = 'SENT'
-	// AND created_at < NOW() - INTERVAL '7 days'; -- Храним историю 7 дней
 	err = CreateOutboxMessage(ctx, tx, event)
 	if err != nil {
 		return fmt.Errorf("orderRepo.Create outbox message: %w", err)

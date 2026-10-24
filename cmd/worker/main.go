@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log/slog"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,12 +12,12 @@ import (
 	"github.com/ThisIsTheOldGuard/payship-core/internal/api"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/config" // Твой пакет конфигов
 	"github.com/ThisIsTheOldGuard/payship-core/internal/database"
+	"github.com/ThisIsTheOldGuard/payship-core/internal/kafka"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/metrics"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/worker"
 	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/segmentio/kafka-go"
 )
 
 func main() {
@@ -39,44 +38,7 @@ func main() {
 	prometheus.MustRegister(metrics.NewDBPoolCollector(pool))
 
 	inDocker := config.IsRunningInDocker()
-	resolver := &worker.SmartResolver{ThisDocker: inDocker}
-
-	slog.Info("Check connect Kafka...")
-	dialer := &kafka.Dialer{
-		Timeout:   5 * time.Second,
-		DualStack: true,
-		Resolver:  resolver,
-	}
-
-	conn, err := dialer.Dial("tcp", WorkerCfg.Kafka.Addr)
-	if err != nil {
-		slog.Error("FAILED to connect Kafka", "addr", WorkerCfg.Kafka.Addr, "error", err)
-		os.Exit(1)
-	}
-	if err := conn.Close(); err != nil {
-		slog.Error("Failed to close check connection", "error", err)
-	}
-
-	slog.Info("Successfully connected to Kafka")
-
-	customDialContext := func(ctx context.Context, network, address string) (net.Conn, error) {
-		host, port, err := net.SplitHostPort(address)
-		if err == nil && !inDocker && host == "payship-kafka" && port == "9092" {
-			address = net.JoinHostPort("127.0.0.1", "9094")
-		}
-		d := &net.Dialer{Timeout: 5 * time.Second}
-		return d.DialContext(ctx, network, address)
-	}
-
-	producer := &kafka.Writer{
-		Addr:         kafka.TCP(WorkerCfg.Kafka.Addr),
-		Balancer:     &kafka.LeastBytes{},
-		RequiredAcks: kafka.RequireOne,
-		Transport: &kafka.Transport{
-			Dial: customDialContext,
-		},
-	}
-
+	producer := kafka.NewProducer(WorkerCfg.Kafka.Addr, inDocker)
 	defer func() {
 		if err := producer.Close(); err != nil {
 			slog.Error("Failed to close Kafka producer", "error", err)
@@ -84,7 +46,7 @@ func main() {
 	}()
 
 	relay := worker.NewOutboxRelayer(pool, producer, WorkerCfg.Kafka.BatchSize, metrics.PrometheusDBMetric{})
-	//relay := worker.NewOutboxRelayer(pool, worker.NewMockProducer(), WorkerCfg.Kafka.BatchSize, metrics.PrometheusDBMetric{})
+	//relay := worker.NewOutboxRelayer(pool, kafka.NewMockProducer(), WorkerCfg.Kafka.BatchSize, metrics.PrometheusDBMetric{})
 	slog.Info("Starting Outbox Relay Worker...")
 
 	go relay.Run(ctx)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,17 +13,6 @@ import (
 
 type MessageWriter interface {
 	WriteMessages(ctx context.Context, msgs ...kafka.Message) error
-}
-
-type SmartResolver struct {
-	ThisDocker bool
-}
-
-func (r *SmartResolver) LookupHost(ctx context.Context, host string) ([]string, error) {
-	if !r.ThisDocker && host == "payship-kafka" {
-		host = "127.0.0.1"
-	}
-	return net.DefaultResolver.LookupHost(ctx, host)
 }
 
 type OutboxRelayer struct {
@@ -148,6 +136,7 @@ func (r *OutboxRelayer) processOutboxBatch(ctx context.Context) (processed int, 
 	var idsSent []int64
 	var failedIDs []int64
 	var failedAttempts []int
+	var failedErrors []string
 
 	for _, event := range batch {
 		err := r.kafkaWriter.WriteMessages(ctx, kafka.Message{
@@ -159,7 +148,8 @@ func (r *OutboxRelayer) processOutboxBatch(ctx context.Context) (processed int, 
 		if err != nil {
 			failedIDs = append(failedIDs, event.id)
 			failedAttempts = append(failedAttempts, event.attempts+1)
-			slog.Info(err.Error())
+			failedErrors = append(failedErrors, err.Error())
+			slog.Warn("kafka send failed for message", "id", event.id, "error", err.Error())
 		} else {
 			idsSent = append(idsSent, event.id)
 		}
@@ -178,7 +168,7 @@ func (r *OutboxRelayer) processOutboxBatch(ctx context.Context) (processed int, 
 			WHERE id = ANY($1)`
 
 		_, err = tx.Exec(ctx, query, idsSent)
-		r.metrics.ObserveQueryDuration("outbox_select_pending", time.Since(start))
+		r.metrics.ObserveQueryDuration("outbox_select_sent", time.Since(start))
 		if err != nil {
 			return 0, fmt.Errorf("worker.outbox.set sent status: %w", err)
 		}
@@ -195,7 +185,7 @@ func (r *OutboxRelayer) processOutboxBatch(ctx context.Context) (processed int, 
 				error = 'Kafka send failed: ' || $3
 				FROM unnest($1::bigint[], $2::int[]) AS t(id, new_attempts)
 			WHERE o.id = t.id`
-		_, err = tx.Exec(ctx, query, failedIDs, failedAttempts, "timeout or broker error")
+		_, err = tx.Exec(ctx, query, failedIDs, failedAttempts, failedErrors)
 		r.metrics.ObserveQueryDuration("outbox_update_retry", time.Since(start))
 		if err != nil {
 			return 0, fmt.Errorf("worker.outbox.set update retry: %w", err)

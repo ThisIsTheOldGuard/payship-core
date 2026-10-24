@@ -56,11 +56,6 @@ func main() {
 	redisCfg := config.LoadRedisConfig()
 	srvCfg := config.LoadSrvConfig()
 
-	slog.Info("⚙️ CONFIG CHECK",
-		"rps", srvCfg.RateLimitRPS,
-		"burst", srvCfg.RateLimitBurst,
-		"db_max", dbCfg.MaxConns)
-
 	// БД
 	pool, err := database.NewDBPool(ctx, dbCfg)
 	if err != nil {

@@ -150,13 +150,9 @@ func LoadWorkerConfig() *WorkerConfig {
 			BatchSize: getIntEnv("KAFKA_BATCH_SIZE", 100),
 		},
 		Worker: Worker{
-			Addr: getStrEnv("WORKER_ADDR", "0.0.0.0:9092"),
+			Addr: getStrEnv("WORKER_ADDR", "0.0.0.0:8081"),
 		},
 	}
-	//return &KafkaConfig{
-	//	Addr:      getStrEnv("KAFKA_ADDR", "localhost:9092"),
-	//	BatchSize: getIntEnv("KAFKA_BATCH_SIZE", 100),
-	//}
 }
 
 // getStrEnv получает строковое значение из окружения.
@@ -220,4 +216,15 @@ func parseDurationEnv(key string, defaultVal time.Duration) time.Duration {
 		slog.Warn("Invalid env var (expected duration)", "key", key, "value", v)
 	}
 	return defaultVal
+}
+
+func IsRunningInDocker() bool {
+	if v := os.Getenv("APP_ENV"); v != "" {
+		if v == "docker" {
+			return true
+		} else {
+			return false
+		}
+	}
+	return false
 }

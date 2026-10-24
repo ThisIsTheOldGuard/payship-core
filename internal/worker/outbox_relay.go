@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,6 +14,17 @@ import (
 
 type MessageWriter interface {
 	WriteMessages(ctx context.Context, msgs ...kafka.Message) error
+}
+
+type SmartResolver struct {
+	ThisDocker bool
+}
+
+func (r *SmartResolver) LookupHost(ctx context.Context, host string) ([]string, error) {
+	if !r.ThisDocker && host == "payship-kafka" {
+		host = "127.0.0.1"
+	}
+	return net.DefaultResolver.LookupHost(ctx, host)
 }
 
 type OutboxRelayer struct {
@@ -147,6 +159,7 @@ func (r *OutboxRelayer) processOutboxBatch(ctx context.Context) (processed int, 
 		if err != nil {
 			failedIDs = append(failedIDs, event.id)
 			failedAttempts = append(failedAttempts, event.attempts+1)
+			slog.Info(err.Error())
 		} else {
 			idsSent = append(idsSent, event.id)
 		}

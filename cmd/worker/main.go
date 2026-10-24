@@ -53,7 +53,10 @@ func main() {
 		slog.Error("FAILED to connect Kafka", "addr", WorkerCfg.Kafka.Addr, "error", err)
 		os.Exit(1)
 	}
-	conn.Close()
+	if err := conn.Close(); err != nil {
+		slog.Error("Failed to close check connection", "error", err)
+	}
+
 	slog.Info("Successfully connected to Kafka")
 
 	customDialContext := func(ctx context.Context, network, address string) (net.Conn, error) {
@@ -74,7 +77,11 @@ func main() {
 		},
 	}
 
-	defer producer.Close()
+	defer func() {
+		if err := producer.Close(); err != nil {
+			slog.Error("Failed to close Kafka producer", "error", err)
+		}
+	}()
 
 	relay := worker.NewOutboxRelayer(pool, producer, WorkerCfg.Kafka.BatchSize, metrics.PrometheusDBMetric{})
 	//relay := worker.NewOutboxRelayer(pool, worker.NewMockProducer(), WorkerCfg.Kafka.BatchSize, metrics.PrometheusDBMetric{})

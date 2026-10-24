@@ -198,7 +198,7 @@ func (r *OutboxRelayer) processOutboxBatch(ctx context.Context) (processed int, 
 		_, err = tx.Exec(ctx, query, failedIDs, failedAttempts, "timeout or broker error")
 		r.metrics.ObserveQueryDuration("outbox_update_retry", time.Since(start))
 		if err != nil {
-			return 0, fmt.Errorf("Worker.outbox.set update retry: %w", err)
+			return 0, fmt.Errorf("worker.outbox.set update retry: %w", err)
 		}
 	}
 
@@ -206,7 +206,7 @@ func (r *OutboxRelayer) processOutboxBatch(ctx context.Context) (processed int, 
 	defer commitCancel()
 
 	if err := tx.Commit(commitCtx); err != nil {
-		return 0, fmt.Errorf("Worker.outbox commit failed: %w", err)
+		return 0, fmt.Errorf("worker.outbox commit failed: %w", err)
 	}
 
 	return len(batch), nil

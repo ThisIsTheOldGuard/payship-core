@@ -71,7 +71,7 @@ services:
     container_name: payship-redis
     ports:
       - "6379:6379"
-    # Для dev отключили сохранение на диск (кэш эфемерный, не забивает диск)
+    # Для dev отключили сохранение на диск (кэш эфемерный)
     command: redis-server --appendonly no --maxmemory 256mb --maxmemory-policy allkeys-lru
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
@@ -86,21 +86,18 @@ services:
     ports:
       - "9092:9092"   # Внутренний порт Docker
       - "9093:9093"   # KRaft контроллер
-      - "${KAFKA_EXTERNAL_PORT:-9094}:${KAFKA_EXTERNAL_PORT:-9094}"   # Динамический порт для GoLand
+      - "${KAFKA_EXTERNAL_PORT:-9094}:${KAFKA_EXTERNAL_PORT:-9094}"   # Порт IDE
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
 
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:${KAFKA_EXTERNAL_PORT:-9094}
-
-      # Динамически подставляем имя хоста для внутренней сети и порт для внешней
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${KAFKA_CONTAINER_HOST_NAME:-payship-kafka}:9092,PLAINTEXT_HOST://localhost:${KAFKA_EXTERNAL_PORT:-9094}
 
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
 
-      # Здесь также динамически подставляется имя контейнера
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@${KAFKA_CONTAINER_HOST_NAME:-payship-kafka}:9093
 
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -117,7 +114,6 @@ services:
       - "8090:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: payship-local
-      # UI динамически берет имя хоста брокера из вашей переменной
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: ${KAFKA_CONTAINER_HOST_NAME:-payship-kafka}:9092
     depends_on:
       - kafka

@@ -31,6 +31,10 @@ type KafkaConfig struct {
 type Worker struct {
 	Addr string
 }
+
+type Notifier struct {
+	Addr string
+}
 type WorkerConfig struct {
 	Kafka  KafkaConfig
 	Worker Worker
@@ -143,15 +147,31 @@ func LoadTestConfig() *TestConfig {
 	return &TestConfig{parseBoolEnv("IsTest", true)}
 }
 
-func LoadWorkerConfig() *WorkerConfig {
-	return &WorkerConfig{
-		Kafka: KafkaConfig{
-			Addr:      getStrEnv("KAFKA_ADDR", "localhost:9092"),
-			BatchSize: getIntEnv("KAFKA_BATCH_SIZE", 100),
-		},
-		Worker: Worker{
-			Addr: getStrEnv("WORKER_ADDR", "0.0.0.0:8081"),
-		},
+//func LoadWorkerConfig() *WorkerConfig {
+//	return &WorkerConfig{
+//		Kafka: *LoadKafkaConfig(),
+//		Worker: Worker{
+//			Addr: getStrEnv("WORKER_ADDR", "0.0.0.0:8081"),
+//		},
+//	}
+//}
+
+func LoadKafkaConfig() *KafkaConfig {
+	return &KafkaConfig{
+		Addr:      getStrEnv("KAFKA_ADDR", "localhost:9092"),
+		BatchSize: getIntEnv("KAFKA_BATCH_SIZE", 100),
+	}
+}
+
+func LoadWorkerConfig() *Worker {
+	return &Worker{
+		Addr: getStrEnv("WORKER_ADDR", "0.0.0.0:8081"),
+	}
+}
+
+func LoadNotifierConfig() *Notifier {
+	return &Notifier{
+		Addr: getStrEnv("NOTIFIER_ADDR", "0.0.0.0:8082"),
 	}
 }
 

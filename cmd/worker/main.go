@@ -27,6 +27,7 @@ func main() {
 
 	dbCfg := config.LoadDBConfig()
 	WorkerCfg := config.LoadWorkerConfig()
+	KafkaCfg := config.LoadKafkaConfig()
 
 	pool, err := database.NewDBPool(ctx, dbCfg)
 	if err != nil {
@@ -38,14 +39,14 @@ func main() {
 	prometheus.MustRegister(metrics.NewDBPoolCollector(pool))
 
 	inDocker := config.IsRunningInDocker()
-	producer := kafka.NewProducer(WorkerCfg.Kafka.Addr, inDocker)
+	producer := kafka.NewProducer(KafkaCfg.Addr, inDocker)
 	defer func() {
 		if err := producer.Close(); err != nil {
 			slog.Error("Failed to close Kafka producer", "error", err)
 		}
 	}()
 
-	relay := worker.NewOutboxRelayer(pool, producer, WorkerCfg.Kafka.BatchSize, metrics.PrometheusDBMetric{})
+	relay := worker.NewOutboxRelayer(pool, producer, KafkaCfg.BatchSize, metrics.PrometheusDBMetric{})
 	//relay := worker.NewOutboxRelayer(pool, kafka.NewMockProducer(), WorkerCfg.Kafka.BatchSize, metrics.PrometheusDBMetric{})
 	slog.Info("Starting Outbox Relay Worker...")
 
@@ -59,7 +60,7 @@ func main() {
 	mux.HandleFunc("GET /ready", api.ReadyHandler(pool))
 
 	srv := &http.Server{
-		Addr:    WorkerCfg.Worker.Addr,
+		Addr:    WorkerCfg.Addr,
 		Handler: mux,
 	}
 

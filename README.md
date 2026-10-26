@@ -135,6 +135,7 @@
 ```bash
 git clone https://github.com/ThisIsTheOldGuard/payship-core
 cd payship-core
+mv .env.example .env
 go mod download
 docker compose up -d
 docker compose ps

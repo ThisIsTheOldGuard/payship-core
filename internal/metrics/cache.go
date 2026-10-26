@@ -1,10 +1,11 @@
-package cache
+package metrics
 
 import (
 	"context"
 	"errors"
 	"time"
 
+	"github.com/ThisIsTheOldGuard/payship-core/internal/cache"
 	"github.com/ThisIsTheOldGuard/payship-core/internal/domain"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/go-redis/v9"
@@ -52,7 +53,7 @@ func RegisterCacheMetrics() {
 // Поля:
 //   - inner: базовая реализация интерфейса Cache
 type MetricsCache struct {
-	inner Cache
+	inner cache.Cache
 }
 
 // NewMetricsCache создаёт новый экземпляр декоратора метрик.
@@ -62,7 +63,7 @@ type MetricsCache struct {
 //
 // Возвращает:
 //   - *MetricsCache: обёрнутый экземпляр, готовый к использованию.
-func NewMetricsCache(inner Cache) *MetricsCache {
+func NewMetricsCache(inner cache.Cache) *MetricsCache {
 	return &MetricsCache{inner: inner}
 }
 

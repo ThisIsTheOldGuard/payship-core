@@ -1,6 +1,6 @@
 # Payship Core
 
-Микросервисная система обработки заказов маркетплейса. Pet-проект для отработки production-практик Go, работы с распределёнными системами и инфраструктурой как код.
+Распределённая event-driven система обработки заказов маркетплейса с гарантией доставки сообщений и консистентностью данных, работы с распределёнными системами и инфраструктурой как код.
 
 <a id="stack"></a>
 ## Стэк
@@ -51,7 +51,7 @@ docker exec -it prometheus wget -qO- http://host.docker.internal:8080/metrics | 
 ### 📁 Структура
 ```
 .
-├── cmd/                            # Точки входа (api)
+├── cmd/                            # Точки входа (api) (api, notifier, worker)
 ├── internal/                       # Бизнес-логика
 ├── docs/                           # Полная API-документация
 ├── migrations/                     # Миграции psql
@@ -61,6 +61,10 @@ docker exec -it prometheus wget -qO- http://host.docker.internal:8080/metrics | 
 ├── tests                           # K6 дымовое нагрузочное тестирование
 └── README.md
 ```
+
+<a id="architectural_diagram"></a>
+### 📐 Архитектура проекта
+![Архитектурная схема](docs/Architectural_diagram.jpg)
 
 <a id="api"></a>
 ##  API

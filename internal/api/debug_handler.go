@@ -24,7 +24,7 @@ func Debug_DB_Slow(pool *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := pool.Acquire(r.Context())
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			SendJSONError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		defer conn.Release()

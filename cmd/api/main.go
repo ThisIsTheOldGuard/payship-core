@@ -91,7 +91,7 @@ func main() {
 	cacheMgr := cache.NewCacheManager(redisClient, noop, cacheStateHook)
 	go cacheMgr.StartHealthCheck(ctx, redisClient)
 
-	metricsCache := cache.NewMetricsCache(cacheMgr)
+	metricsCache := metrics.NewMetricsCache(cacheMgr)
 
 	// Server
 
@@ -108,6 +108,7 @@ func main() {
 
 	// Prometheus
 	metrics.RegisterMetrics()
+	metrics.RegisterCacheMetrics()
 	metrics.RegisterDBMetrics()
 	prometheus.MustRegister(metrics.NewDBPoolCollector(pool))
 

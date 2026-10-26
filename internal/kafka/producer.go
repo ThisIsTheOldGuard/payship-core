@@ -10,12 +10,6 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-// MessageWriter - общий интерфейс для отправки сообщений.
-type MessageWriter interface {
-	WriteMessages(ctx context.Context, msgs ...kafka.Message) error
-	Close() error
-}
-
 // SmartResolver решает проблему DNS при локальной разработке vs Docker.
 type SmartResolver struct {
 	ThisDocker bool
@@ -30,7 +24,7 @@ func (r *SmartResolver) LookupHost(ctx context.Context, host string) ([]string, 
 
 // NewProducer создает и проверяет соединение с Kafka.
 // При неудачном подключение завершает работу сервиса
-func NewProducer(addr string, inDocker bool) MessageWriter {
+func NewProducer(addr string, inDocker bool) *kafka.Writer {
 	resolver := &SmartResolver{ThisDocker: inDocker}
 
 	dialer := &kafka.Dialer{
